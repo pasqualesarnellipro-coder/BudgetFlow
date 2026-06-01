@@ -164,11 +164,13 @@ export function TransactionsPage() {
     const defaultAccount = accounts.find((a) => a.is_default)
     setForm({ ...emptyForm(), account_id: defaultAccount?.id ?? '' })
     setEditing(null)
+    setSaveError(null)
     setShowModal(true)
   }
   const openEdit = (t: Transaction) => {
     setForm({ date: t.date, type: t.type, category_id: t.category_id, description: t.description, amount: String(t.amount), is_business: t.is_business, activity_name: t.activity_name ?? '', account_id: t.account_id ?? '' })
     setEditing(t.id)
+    setSaveError(null)
     setShowModal(true)
   }
 
@@ -224,14 +226,31 @@ export function TransactionsPage() {
 
   const clearSelection = () => { setSelectedIds(new Set()); setAllFilteredSelected(false) }
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const handleSave = async () => {
     if (!profile) return
-    const payload = { ...form, amount: parseFloat(form.amount), user_id: profile.id }
-    if (editing) {
-      await supabase.from('transactions').update(payload).eq('id', editing)
-    } else {
-      await supabase.from('transactions').insert(payload)
+    setSaveError(null)
+
+    // Normalizza i campi nullable: stringa vuota → null
+    // account_id è un UUID — '' causerebbe HTTP 400 (invalid UUID)
+    const payload = {
+      ...form,
+      amount: parseFloat(form.amount),
+      user_id: profile.id,
+      account_id: form.account_id || null,
+      activity_name: form.activity_name || null,
     }
+
+    const { error } = editing
+      ? await supabase.from('transactions').update(payload).eq('id', editing)
+      : await supabase.from('transactions').insert(payload)
+
+    if (error) {
+      setSaveError(`Errore nel salvataggio: ${error.message}`)
+      return
+    }
+
     qc.invalidateQueries({ queryKey: ['transactions'] })
     setShowModal(false)
   }
@@ -705,6 +724,14 @@ export function TransactionsPage() {
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Spunta se è un costo legato alla tua attività freelance</p>
                   </div>
                 </label>
+              )}
+
+              {/* Errore salvataggio */}
+              {saveError && (
+                <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                  <span className="text-rose-500 text-sm shrink-0">⚠</span>
+                  <p className="text-xs text-rose-700 dark:text-rose-300">{saveError}</p>
+                </div>
               )}
 
               {/* CTA */}
