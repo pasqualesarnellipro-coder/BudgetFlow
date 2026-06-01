@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import { DonutProgressRing } from '@/components/ui/DonutProgressRing'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PieChart, ArrowRight } from 'lucide-react'
 import type { Transaction, BudgetPlan, Category } from '@/lib/database.types'
 
 const TYPE_CONFIG = {
@@ -15,6 +16,7 @@ const TYPE_CONFIG = {
 }
 
 export function MonthlyDashboard() {
+  const navigate = useNavigate()
   const { profile, selectedYear, selectedMonth, setSelectedMonth, darkMode } = useAppStore()
   const currency = profile?.currency ?? 'EUR'
   const monthName = MONTH_NAMES[selectedMonth - 1]
@@ -156,6 +158,29 @@ export function MonthlyDashboard() {
         })}
       </div>
 
+      {/* Banner: nessun budget impostato */}
+      {budgetPlans.length === 0 && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-5 py-4 flex items-start gap-4">
+          <div className="w-9 h-9 bg-amber-500 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+            <PieChart size={16} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-900 dark:text-amber-200 text-sm">
+              Nessun budget obiettivo impostato
+            </p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+              Le colonne <strong>Obiettivo</strong> e <strong>% Budget</strong> sono vuote perché non hai ancora definito i valori pianificati. Vai su <strong>Budget Annuale</strong> per inserire quanto vuoi spendere/guadagnare per ogni categoria ogni mese.
+            </p>
+            <button
+              onClick={() => navigate('/budget')}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg transition-colors"
+            >
+              <PieChart size={12} /> Vai a Budget Annuale <ArrowRight size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main content: Tables + Right panel */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
@@ -181,7 +206,16 @@ export function MonthlyDashboard() {
                   <thead>
                     <tr className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50">
                       <th className="text-left px-5 py-2">Categoria</th>
-                      <th className="text-right px-5 py-2">Obiettivo</th>
+                      <th className="text-right px-5 py-2">
+                        <button
+                          onClick={() => navigate('/budget')}
+                          className="inline-flex items-center gap-1 hover:text-indigo-500 transition-colors group"
+                          title="Imposta i budget in Budget Annuale"
+                        >
+                          Obiettivo
+                          <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </th>
                       <th className="text-right px-5 py-2">Effettivo</th>
                       <th className="text-right px-5 py-2">Differenza</th>
                       <th className="text-right px-5 py-2">% budget</th>

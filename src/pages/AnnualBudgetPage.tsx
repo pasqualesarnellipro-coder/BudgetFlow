@@ -74,6 +74,16 @@ export function AnnualBudgetPage() {
         </select>
       </div>
 
+      {/* Hint primo utilizzo */}
+      {budgetPlans.length === 0 && (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 flex items-start gap-3 text-sm">
+          <span className="text-indigo-500 text-base mt-0.5">💡</span>
+          <p className="text-indigo-700 leading-relaxed">
+            <strong>Come funziona:</strong> clicca su qualsiasi cella e digita l'importo obiettivo per quella categoria e quel mese. I valori vengono salvati automaticamente. Puoi anche copiare un valore uguale per tutto l'anno digitandolo una volta sola.
+          </p>
+        </div>
+      )}
+
       {/* Summary row */}
       <div className="bg-white rounded-xl shadow-sm p-4 overflow-x-auto">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Ancora da allocare per mese</p>
