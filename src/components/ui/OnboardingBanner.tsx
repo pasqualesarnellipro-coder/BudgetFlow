@@ -12,21 +12,24 @@ interface StepDef {
   nextLabel: string
 }
 
+// Ordine corretto: Conti → Categorie → Budget → Transazioni → Abbonamenti → Obiettivi
 const STEPS_PERSONAL: StepDef[] = [
-  { path: '/categories',   label: 'Controlla le categorie',          nextPath: '/budget',       nextLabel: 'Pianifica il budget' },
-  { path: '/budget',       label: 'Pianifica il budget mensile',     nextPath: '/transactions', nextLabel: 'Aggiungi transazioni' },
-  { path: '/transactions', label: 'Aggiungi le prime transazioni',   nextPath: '/bills',        nextLabel: 'Spese ricorrenti' },
-  { path: '/bills',        label: 'Aggiungi le spese ricorrenti',    nextPath: '/goals',        nextLabel: 'Obiettivi di risparmio' },
-  { path: '/goals',        label: 'Imposta gli obiettivi',           nextPath: '/welcome',      nextLabel: 'Completa setup' },
+  { path: '/accounts',     label: 'Aggiungi il primo conto',          nextPath: '/categories',   nextLabel: 'Controlla le categorie' },
+  { path: '/categories',   label: 'Controlla le categorie',           nextPath: '/budget',       nextLabel: 'Pianifica il budget' },
+  { path: '/budget',       label: 'Pianifica il budget mensile',      nextPath: '/transactions', nextLabel: 'Aggiungi transazioni' },
+  { path: '/transactions', label: 'Aggiungi le prime transazioni',    nextPath: '/bills',        nextLabel: 'Spese ricorrenti' },
+  { path: '/bills',        label: 'Aggiungi le spese ricorrenti',     nextPath: '/goals',        nextLabel: 'Obiettivi di risparmio' },
+  { path: '/goals',        label: 'Imposta gli obiettivi',            nextPath: '/welcome',      nextLabel: 'Completa setup' },
 ]
 
 const STEPS_FREELANCE: StepDef[] = [
-  { path: '/categories',   label: 'Controlla le categorie',          nextPath: '/budget',       nextLabel: 'Pianifica il budget' },
-  { path: '/budget',       label: 'Pianifica il budget mensile',     nextPath: '/transactions', nextLabel: 'Aggiungi transazioni' },
-  { path: '/transactions', label: 'Aggiungi le prime transazioni',   nextPath: '/bills',        nextLabel: 'Spese ricorrenti' },
-  { path: '/bills',        label: 'Aggiungi le spese ricorrenti',    nextPath: '/goals',        nextLabel: 'Obiettivi di risparmio' },
-  { path: '/goals',        label: 'Imposta gli obiettivi',           nextPath: '/freelance',    nextLabel: 'Registra le prime fatture' },
-  { path: '/freelance',    label: 'Registra le prime fatture',       nextPath: '/welcome',      nextLabel: 'Completa setup' },
+  { path: '/accounts',     label: 'Aggiungi il primo conto',          nextPath: '/categories',   nextLabel: 'Controlla le categorie' },
+  { path: '/categories',   label: 'Controlla le categorie',           nextPath: '/budget',       nextLabel: 'Pianifica il budget' },
+  { path: '/budget',       label: 'Pianifica il budget mensile',      nextPath: '/transactions', nextLabel: 'Aggiungi transazioni' },
+  { path: '/transactions', label: 'Aggiungi le prime transazioni',    nextPath: '/bills',        nextLabel: 'Spese ricorrenti' },
+  { path: '/bills',        label: 'Aggiungi le spese ricorrenti',     nextPath: '/goals',        nextLabel: 'Obiettivi di risparmio' },
+  { path: '/goals',        label: 'Imposta gli obiettivi',            nextPath: '/freelance',    nextLabel: 'Registra le prime fatture' },
+  { path: '/freelance',    label: 'Registra le prime fatture',        nextPath: '/welcome',      nextLabel: 'Completa setup' },
 ]
 
 export function OnboardingBanner() {

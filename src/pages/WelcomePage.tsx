@@ -3,7 +3,7 @@ import { useAppStore } from '@/store/useAppStore'
 import {
   Tags, PieChart, ArrowLeftRight, RefreshCw, Target,
   FileText, Lightbulb, BarChart2, Layers, ArrowRight,
-  CheckCircle2, TrendingUp,
+  CheckCircle2, TrendingUp, Wallet,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -23,6 +23,18 @@ interface Step {
 const STEPS_PERSONAL: Step[] = [
   {
     num: 1,
+    Icon: Wallet,
+    iconColor: '#4f46e5',
+    iconBg: '#eef2ff',
+    borderColor: '#a5b4fc',
+    title: 'Aggiungi il tuo primo conto',
+    desc: 'Collega il conto corrente, la carta o il portafoglio contanti. Serve per associare le transazioni — senza conto il salvataggio non funziona.',
+    action: 'Vai ai Conti',
+    path: '/accounts',
+    time: '1 min',
+  },
+  {
+    num: 2,
     Icon: Tags,
     iconColor: '#059669',
     iconBg: '#ecfdf5',
@@ -34,7 +46,7 @@ const STEPS_PERSONAL: Step[] = [
     time: '2 min',
   },
   {
-    num: 2,
+    num: 3,
     Icon: PieChart,
     iconColor: '#e11d48',
     iconBg: '#fff1f2',
@@ -46,7 +58,7 @@ const STEPS_PERSONAL: Step[] = [
     time: '5 min',
   },
   {
-    num: 3,
+    num: 4,
     Icon: ArrowLeftRight,
     iconColor: '#d97706',
     iconBg: '#fffbeb',
@@ -58,7 +70,7 @@ const STEPS_PERSONAL: Step[] = [
     time: '3 min',
   },
   {
-    num: 4,
+    num: 5,
     Icon: RefreshCw,
     iconColor: '#7c3aed',
     iconBg: '#f5f3ff',
@@ -70,7 +82,7 @@ const STEPS_PERSONAL: Step[] = [
     time: '3 min',
   },
   {
-    num: 5,
+    num: 6,
     Icon: Target,
     iconColor: '#0284c7',
     iconBg: '#f0f9ff',
@@ -85,7 +97,7 @@ const STEPS_PERSONAL: Step[] = [
 
 const STEPS_FREELANCE_EXTRA: Step[] = [
   {
-    num: 6,
+    num: 7,
     Icon: FileText,
     iconColor: '#4f46e5',
     iconBg: '#eef2ff',
@@ -220,11 +232,11 @@ export function WelcomePage() {
       {/* CTA bottom */}
       <div className="grid grid-cols-2 gap-3 pb-2">
         <button
-          onClick={() => navigate('/budget')}
+          onClick={() => navigate('/accounts')}
           className="bg-indigo-600 text-white font-semibold py-3 rounded-xl text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
         >
-          <PieChart size={15} />
-          Inizia dal Budget
+          <Wallet size={15} />
+          Inizia dai Conti
         </button>
         <button
           onClick={() => navigate('/')}
