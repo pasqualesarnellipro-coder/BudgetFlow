@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import type { Category, BudgetPlan } from '@/lib/database.types'
-import { useState } from 'react'
-import { X, ChevronRight } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { X, ChevronRight, Check } from 'lucide-react'
 
 const TYPE_CONFIG = {
   INCOME:   { label: 'Reddito',  color: '#10b981' },
@@ -26,6 +26,9 @@ export function AnnualBudgetPage() {
   const qc = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [fillPanel, setFillPanel] = useState<FillPanel | null>(null)
+  // Feedback cella: chiave "catId-month" → mostra ✓ per 1.2s dopo il save
+  const [savedCell, setSavedCell] = useState<string | null>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 6 }, (_, i) => currentYear - 3 + i)
 
@@ -63,6 +66,11 @@ export function AnnualBudgetPage() {
     }
     await qc.invalidateQueries({ queryKey: ['budget_plans'] })
     setSaving(false)
+    // Feedback visivo: ✓ verde per 1.2s sulla cella appena salvata
+    const cellKey = `${catId}-${month}`
+    setSavedCell(cellKey)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    savedTimer.current = setTimeout(() => setSavedCell(null), 1200)
   }
 
   // ── Fill: riempi da un mese a Dicembre (o tutti i 12) ────────────────────
@@ -213,6 +221,34 @@ export function AnnualBudgetPage() {
         </div>
       )}
 
+      {/* Grand total annuo per tipo ─────────────────────────────────────── */}
+      {(budgetPlans as BudgetPlan[]).length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {(Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
+            const typeCats = (categories as Category[]).filter((c) => c.type === type)
+            const annualTotal = typeCats.reduce(
+              (sum, cat) => sum + MONTH_NAMES.reduce((s, _, i) => s + getAmount(cat.id, i + 1), 0),
+              0
+            )
+            return (
+              <div
+                key={type}
+                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-4 py-3"
+                style={{ borderLeft: `3px solid ${TYPE_CONFIG[type].color}` }}
+              >
+                <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">
+                  {TYPE_CONFIG[type].label}
+                </p>
+                <p className="font-bold text-gray-900 dark:text-gray-100 text-lg">
+                  {formatCurrency(annualTotal, currency)}
+                </p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">totale anno</p>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* Summary row */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 overflow-x-auto">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
@@ -281,19 +317,26 @@ export function AnnualBudgetPage() {
                           const currentAmount = getAmount(cat.id, month)
                           return (
                             <td key={i} className="px-1 py-1 relative group/cell">
-                              <input
-                                key={`${cat.id}-${month}-${currentAmount}`}
-                                type="number"
-                                defaultValue={currentAmount || ''}
-                                onBlur={(e) => handleBlur(cat.id, month, e.target.value)}
-                                placeholder="0"
-                                className="w-full text-right text-xs border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-income rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-income/50 bg-transparent dark:text-gray-200 pr-5"
-                              />
+                              {savedCell === `${cat.id}-${month}` ? (
+                                // Feedback ✓ dopo il save
+                                <div className="w-full flex items-center justify-end pr-1.5 py-1 text-emerald-500">
+                                  <Check size={13} strokeWidth={2.5} />
+                                </div>
+                              ) : (
+                                <input
+                                  key={`${cat.id}-${month}-${currentAmount}`}
+                                  type="number"
+                                  defaultValue={currentAmount || ''}
+                                  onBlur={(e) => handleBlur(cat.id, month, e.target.value)}
+                                  placeholder="0"
+                                  className="w-full text-right text-xs border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-income rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-income/50 bg-transparent dark:text-gray-200 pr-5"
+                                />
+                              )}
                               {/* Mini bottone "→ da qui" — appare al focus della cella */}
                               <button
                                 tabIndex={-1}
                                 onMouseDown={(e) => {
-                                  e.preventDefault() // non togliere focus dall'input
+                                  e.preventDefault()
                                   const inputEl = e.currentTarget.previousElementSibling as HTMLInputElement
                                   openFill(cat, month, inputEl?.value || String(currentAmount || ''))
                                 }}
@@ -325,6 +368,29 @@ export function AnnualBudgetPage() {
                       </tr>
                     )
                   })}
+                  {/* Riga totale sezione */}
+                  {typeCats.length > 1 && (
+                    <tr className="border-t-2 border-gray-200 dark:border-gray-600 bg-gray-50/70 dark:bg-gray-700/30">
+                      <td className="px-4 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Totale {TYPE_CONFIG[type].label}
+                      </td>
+                      {MONTH_NAMES.map((_, i) => {
+                        const monthTotal = typeCats.reduce((s, cat) => s + getAmount(cat.id, i + 1), 0)
+                        return (
+                          <td key={i} className="px-2 py-2 text-right text-xs font-semibold" style={{ color: TYPE_CONFIG[type].color }}>
+                            {monthTotal > 0 ? formatCurrency(monthTotal, currency) : <span className="text-gray-300">—</span>}
+                          </td>
+                        )
+                      })}
+                      <td className="px-4 py-2 text-right text-sm font-bold" style={{ color: TYPE_CONFIG[type].color }}>
+                        {formatCurrency(
+                          typeCats.reduce((s, cat) => s + MONTH_NAMES.reduce((ms, _, i) => ms + getAmount(cat.id, i + 1), 0), 0),
+                          currency
+                        )}
+                      </td>
+                      <td />
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
