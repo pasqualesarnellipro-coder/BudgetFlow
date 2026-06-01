@@ -48,6 +48,8 @@ export function BillsPage() {
   const [calYear] = useState(new Date().getFullYear())
   const [showModal, setShowModal] = useState(false)
   const [autoToast, setAutoToast] = useState<string[]>([])
+  const [autoError, setAutoError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '',
     category_id: '',
@@ -122,7 +124,7 @@ export function BillsPage() {
       // Insert transaction
       const day = Math.min(bill.day_of_month, new Date(currentYear, currentMonth, 0).getDate())
       const date = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      await supabase.from('transactions').insert({
+      const { error } = await supabase.from('transactions').insert({
         user_id: profile.id,
         date,
         type: 'EXPENSES',
@@ -130,7 +132,12 @@ export function BillsPage() {
         description: bill.name,
         amount: bill.amount_due,
         is_business: false,
+        account_id: null,
       })
+      if (error) {
+        setAutoError(`Errore generando "${bill.name}": ${error.message}`)
+        continue
+      }
       markBillGenerated(currentYear, currentMonth, bill.id)
       generated.push(bill.name)
     }
@@ -144,7 +151,8 @@ export function BillsPage() {
 
   const handleSave = async () => {
     if (!profile || !form.name || !form.amount_due) return
-    await supabase.from('recurring_bills').insert({
+    setSaveError(null)
+    const { error } = await supabase.from('recurring_bills').insert({
       user_id: profile.id,
       name: form.name,
       category_id: form.category_id || null,
@@ -155,6 +163,7 @@ export function BillsPage() {
       active: true,
       auto_generate: form.auto_generate,
     })
+    if (error) { setSaveError(`Errore nel salvataggio: ${error.message}`); return }
     qc.invalidateQueries({ queryKey: ['bills'] })
     setShowModal(false)
     setForm({ name: '', category_id: '', amount_due: '', period: 'MONTHLY', day_of_month: '1', auto_generate: true })
@@ -205,14 +214,25 @@ export function BillsPage() {
   return (
     <div className="p-5 space-y-5 max-w-5xl">
 
-      {/* Toast auto-generazione */}
+      {/* Toast successo auto-generazione */}
       {autoToast.length > 0 && (
-        <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm flex items-center gap-2 animate-in slide-in-from-top">
+        <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-lg text-sm flex items-center gap-2">
           <CheckCircle2 size={16} />
           <div>
             <p className="font-semibold">Transazioni generate automaticamente!</p>
             <p className="text-emerald-100 text-xs">{autoToast.join(', ')}</p>
           </div>
+        </div>
+      )}
+
+      {/* Banner errore auto-generazione */}
+      {autoError && (
+        <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 flex items-start gap-2">
+          <span className="text-rose-500 shrink-0">⚠</span>
+          <div className="flex-1">
+            <p className="text-sm text-rose-700">{autoError}</p>
+          </div>
+          <button onClick={() => setAutoError(null)} className="text-rose-400 hover:text-rose-600 text-lg leading-none">×</button>
         </div>
       )}
 
@@ -550,8 +570,15 @@ export function BillsPage() {
                 </div>
               </label>
 
+              {saveError && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                  <span className="text-rose-500 text-sm shrink-0">⚠</span>
+                  <p className="text-xs text-rose-700">{saveError}</p>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-1">
-                <button onClick={() => setShowModal(false)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl hover:bg-gray-50 text-sm">
+                <button onClick={() => { setShowModal(false); setSaveError(null) }} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl hover:bg-gray-50 text-sm">
                   {t('cancel')}
                 </button>
                 <button

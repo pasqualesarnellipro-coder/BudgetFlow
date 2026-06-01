@@ -100,18 +100,22 @@ export function FICConnect() {
     }
   }
 
-  // Integrazione non configurata → messaggio utente pulito, nessun dettaglio tecnico
+  // Integrazione non configurata — richiede variabile d'ambiente VITE_FIC_CLIENT_ID
   if (!FIC_CLIENT_ID) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-          <Link2Off size={18} className="text-gray-400" />
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+          <Link2Off size={18} className="text-amber-500" />
         </div>
         <div>
-          <p className="font-semibold text-gray-700 text-sm">Integrazione non attiva</p>
-          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-            La connessione con Fatture in Cloud non è ancora disponibile in questa versione dell'app.
-            Puoi comunque importare le fatture manualmente tramite il pulsante <strong>Importa AI</strong> nella sezione Fatture Emesse.
+          <p className="font-semibold text-amber-800 text-sm">Integrazione Fatture in Cloud — richiede configurazione</p>
+          <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+            La sincronizzazione automatica con Fatture in Cloud è disponibile ma richiede la variabile d'ambiente{' '}
+            <code className="bg-amber-100 px-1 rounded font-mono">VITE_FIC_CLIENT_ID</code> nel file <code className="bg-amber-100 px-1 rounded font-mono">.env</code>.
+            Consulta il <strong>SETUP.md</strong> per i dettagli.
+          </p>
+          <p className="text-xs text-amber-600 mt-2">
+            Nel frattempo puoi importare le fatture manualmente con <strong>Importa AI</strong> nella sezione qui sopra.
           </p>
         </div>
       </div>

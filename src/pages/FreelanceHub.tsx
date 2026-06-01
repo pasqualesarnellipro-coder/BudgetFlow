@@ -17,6 +17,7 @@ import {
   CalendarClock, ChevronDown, ChevronUp, Info, BarChart2, Upload,
 } from 'lucide-react'
 import { InvoiceImportModal } from '@/components/import/InvoiceImportModal'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ReferenceLine, Cell,
@@ -532,12 +533,20 @@ export function FreelanceHub() {
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">Fatture Emesse</h2>
-          <button
-            onClick={() => setShowInvoiceImport(true)}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-50"
-          >
-            <Upload size={12} /> Importa AI
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowInvoiceImport(true)}
+              className="flex items-center gap-1.5 border border-indigo-200 text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-100 transition-colors"
+            >
+              <Upload size={12} /> Importa AI
+            </button>
+            <HelpTooltip
+              title="Importa fatture con AI"
+              content="Carica una fattura in PDF, foto o Excel. Claude AI legge automaticamente i dati (cliente, data, importo) e li pre-compila nel form. Funziona anche con foto di fatture cartacee. Richiede la configurazione della Supabase Edge Function — vedi SETUP.md."
+              position="bottom"
+              size="lg"
+            />
+          </div>
           <button onClick={() => setShowInvoiceModal(true)} className="flex items-center gap-1.5 bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-600">
             <Plus size={13} /> Aggiungi
           </button>
