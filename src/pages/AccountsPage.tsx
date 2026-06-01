@@ -345,6 +345,8 @@ export function AccountsPage() {
                     <button
                       key={b.name}
                       type="button"
+                      aria-label={`Seleziona ${b.name}`}
+                      aria-pressed={form.bank_name === b.name}
                       onClick={() => setForm((f) => ({
                         ...f,
                         bank_name: b.name,
@@ -358,7 +360,14 @@ export function AccountsPage() {
                           : 'border-gray-100 hover:border-gray-300 bg-gray-50'
                       }`}
                     >
-                      <div className="text-lg">{b.icon}</div>
+                      {/* Monogramma colorato — riconoscibile e coerente tra OS */}
+                      <div
+                        aria-hidden="true"
+                        className="w-8 h-8 rounded-lg mx-auto flex items-center justify-center text-white text-xs font-bold"
+                        style={{ backgroundColor: b.color }}
+                      >
+                        {b.name.slice(0, 2).toUpperCase()}
+                      </div>
                       <div className="text-[10px] text-gray-600 mt-0.5 truncate">{b.name}</div>
                     </button>
                   ))}
@@ -440,22 +449,40 @@ export function AccountsPage() {
               {/* Colore */}
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Colore</label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {COLOR_PRESETS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setForm({ ...form, color: c })}
-                      className={`w-7 h-7 rounded-full border-2 transition-all ${form.color === c ? 'border-gray-800 scale-110' : 'border-white shadow'}`}
-                      style={{ backgroundColor: c }}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap" role="group" aria-label="Colori predefiniti">
+                    {COLOR_PRESETS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-label={`Colore ${c}`}
+                        aria-pressed={form.color === c}
+                        onClick={() => setForm({ ...form, color: c })}
+                        className={`w-7 h-7 rounded-full border-2 transition-all ${form.color === c ? 'border-gray-800 scale-110 ring-2 ring-offset-1 ring-gray-400' : 'border-white shadow hover:scale-105'}`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                  {/* Input hex personalizzato — accessibile e cross-browser coerente */}
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-6 h-6 rounded-md border border-gray-200 shrink-0"
+                      style={{ backgroundColor: form.color ?? '#6366f1' }}
+                      aria-hidden="true"
                     />
-                  ))}
-                  <input
-                    type="color"
-                    value={form.color ?? '#6366f1'}
-                    onChange={(e) => setForm({ ...form, color: e.target.value })}
-                    className="w-7 h-7 rounded-full cursor-pointer border border-gray-200"
-                  />
+                    <input
+                      type="text"
+                      value={form.color ?? '#6366f1'}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setForm({ ...form, color: v })
+                      }}
+                      maxLength={7}
+                      placeholder="#6366f1"
+                      aria-label="Colore personalizzato in formato esadecimale"
+                      className="w-24 border border-gray-200 rounded-lg px-2 py-1 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                    />
+                  </div>
                 </div>
               </div>
 

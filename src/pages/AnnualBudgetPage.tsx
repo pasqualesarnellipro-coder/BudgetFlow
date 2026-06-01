@@ -16,7 +16,8 @@ export function AnnualBudgetPage() {
   const { profile, selectedYear, setSelectedYear } = useAppStore()
   const qc = useQueryClient()
   const [saving, setSaving] = useState(false)
-  const years = [2023, 2024, 2025, 2026, 2027]
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 6 }, (_, i) => currentYear - 3 + i)
 
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', profile?.id],

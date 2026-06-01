@@ -34,9 +34,13 @@ interface FormState {
   account_id: string
 }
 
+/** Ricorda l'ultimo tipo usato — così l'utente non deve selezionarlo ogni volta */
+const getLastTxType = (): TransactionType =>
+  (localStorage.getItem('bf_last_tx_type') as TransactionType) ?? 'EXPENSES'
+
 const emptyForm = (): FormState => ({
   date: new Date().toISOString().slice(0, 10),
-  type: 'EXPENSES',
+  type: getLastTxType(),
   category_id: '',
   description: '',
   amount: '',
@@ -536,7 +540,10 @@ export function TransactionsPage() {
                       <button
                         key={t}
                         type="button"
-                        onClick={() => setForm({ ...form, type: t, category_id: '' })}
+                        onClick={() => {
+                          setForm({ ...form, type: t, category_id: '' })
+                          localStorage.setItem('bf_last_tx_type', t)
+                        }}
                         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                           active
                             ? `${ui.activeBg} ${ui.color} ring-2 ${ui.ring}`
@@ -605,10 +612,13 @@ export function TransactionsPage() {
                     </div>
                   </div>
                   <div>
-                    <label htmlFor="tx-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data</label>
+                    <label htmlFor="tx-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      Data <span className="text-gray-300 dark:text-gray-600 font-normal">(gg/mm/aaaa)</span>
+                    </label>
                     <input
                       id="tx-date"
                       type="date"
+                      lang="it-IT"
                       value={form.date}
                       onChange={(e) => setForm({ ...form, date: e.target.value })}
                       className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"

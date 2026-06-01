@@ -107,7 +107,8 @@ export function AnnualDashboard() {
   const pressureFiscale = nettoCalc && fatturatoYTD > 0
     ? (nettoCalc.totalAccrual / fatturatoYTD) * 100 : 0
 
-  const years = [2023, 2024, 2025, 2026, 2027]
+  // Range dinamico: 3 anni nel passato + anno corrente + 2 nel futuro
+  const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 3 + i)
   const hasTransactions = transactions.length > 0
 
   return (
