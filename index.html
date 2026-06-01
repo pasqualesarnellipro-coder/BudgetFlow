@@ -1,13 +1,49 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>budgetflow</title>
+
+    <!-- Favicon & PWA -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f1b2d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BudgetFlow" />
+
+    <!-- SEO -->
+    <title>BudgetFlow — Gestisci il tuo budget personale e freelance</title>
+    <meta name="description" content="BudgetFlow è l'app per tenere sotto controllo entrate, spese, risparmi e tasse. Ideale per privati e freelance con P.IVA." />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- Open Graph (anteprima sui social e nelle chat) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BudgetFlow" />
+    <meta property="og:title" content="BudgetFlow — Gestisci il tuo budget" />
+    <meta property="og:description" content="Tieni traccia di entrate, spese, risparmi e tasse. Pensato per privati e freelance con P.IVA." />
+    <meta property="og:url" content="https://budget-flow-mu-seven.vercel.app" />
+    <meta property="og:locale" content="it_IT" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="BudgetFlow" />
+    <meta name="twitter:description" content="Gestisci il tuo budget personale e freelance in un unico posto." />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Service Worker — registrazione PWA -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {
+            // SW non critico — fallisce silenziosamente
+          })
+        })
+      }
+    </script>
   </body>
 </html>
