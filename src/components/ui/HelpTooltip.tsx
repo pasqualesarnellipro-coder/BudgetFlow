@@ -110,15 +110,19 @@ export function HelpTooltip({
         type="button"
         onClick={handleToggle}
         className={`inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 hover:bg-indigo-500 hover:text-white text-gray-500 text-[10px] font-bold leading-none transition-colors flex-shrink-0 ${className}`}
-        aria-label="Aiuto"
+        aria-label={title ? `Aiuto: ${title}` : 'Aiuto'}
+        aria-expanded={visible}
+        aria-haspopup="dialog"
       >
-        ?
+        <span aria-hidden="true">?</span>
       </button>
 
       {visible && createPortal(
         <div
           style={{ ...positionStyle, width: tooltipWidth, zIndex: 9999 }}
           className={`${arrowClass} bg-gray-900 text-white rounded-xl px-3 py-2.5 shadow-xl text-xs leading-relaxed`}
+          role="dialog"
+          aria-modal="false"
           onClick={(e) => e.stopPropagation()}
         >
           {title && <p className="font-semibold text-white mb-1">{title}</p>}

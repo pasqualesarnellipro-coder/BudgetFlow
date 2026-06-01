@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import { DonutProgressRing } from '@/components/ui/DonutProgressRing'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Transaction, BudgetPlan, Category } from '@/lib/database.types'
 
 const TYPE_CONFIG = {
@@ -18,7 +19,7 @@ export function MonthlyDashboard() {
   const currency = profile?.currency ?? 'EUR'
   const monthName = MONTH_NAMES[selectedMonth - 1]
 
-  const { data: transactions = [] } = useQuery({
+  const { data: transactions = [], isFetching } = useQuery({
     queryKey: ['transactions', profile?.id, selectedYear],
     queryFn: async () => {
       const { data } = await supabase.from('transactions').select('*').eq('user_id', profile!.id)
@@ -80,23 +81,44 @@ export function MonthlyDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard Mensile</h1>
-          <p className="text-gray-400 text-sm">{monthName} {selectedYear}</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard Mensile</h1>
+            {isFetching && (
+              <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-500 rounded-full animate-spin" />
+            )}
+          </div>
+          <p className="text-gray-500 text-sm">{monthName} {selectedYear}</p>
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {MONTH_NAMES.map((m, i) => (
-            <button
-              key={m}
-              onClick={() => setSelectedMonth(i + 1)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                selectedMonth === i + 1
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSelectedMonth(Math.max(1, selectedMonth - 1))}
+            disabled={selectedMonth === 1}
+            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors shrink-0"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <div className="flex gap-1 overflow-x-auto scrollbar-none pb-0.5">
+            {MONTH_NAMES.map((m, i) => (
+              <button
+                key={m}
+                onClick={() => setSelectedMonth(i + 1)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                  selectedMonth === i + 1
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setSelectedMonth(Math.min(12, selectedMonth + 1))}
+            disabled={selectedMonth === 12}
+            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors shrink-0"
+          >
+            <ChevronRight size={15} />
+          </button>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
@@ -8,7 +9,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { TrendingUp, TrendingDown, PiggyBank, CreditCard, Calculator, Landmark } from 'lucide-react'
+import { TrendingUp, TrendingDown, PiggyBank, CreditCard, Calculator, Landmark, ArrowLeftRight, BarChart2 } from 'lucide-react'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { Transaction } from '@/lib/database.types'
 
@@ -20,13 +21,14 @@ const TYPE_CONFIG = {
 }
 
 export function AnnualDashboard() {
+  const navigate = useNavigate()
   const { profile, selectedYear, setSelectedYear } = useAppStore()
   const currency = profile?.currency ?? 'EUR'
   const now = new Date()
   const currentMonth = now.toLocaleString('it-IT', { month: 'long', year: 'numeric' })
   const isFreelance = profile?.profile_type === 'FREELANCE' || profile?.profile_type === 'BOTH'
 
-  const { data: transactions = [] } = useQuery({
+  const { data: transactions = [], isFetching } = useQuery({
     queryKey: ['transactions', profile?.id, selectedYear],
     queryFn: async () => {
       const { data } = await supabase.from('transactions').select('*')
@@ -105,26 +107,63 @@ export function AnnualDashboard() {
     ? (nettoCalc.totalAccrual / fatturatoYTD) * 100 : 0
 
   const years = [2023, 2024, 2025, 2026, 2027]
+  const hasTransactions = transactions.length > 0
 
   return (
     <div className="p-5 space-y-5 max-w-5xl">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Ciao, {profile?.name}
           </h1>
-          <p className="text-gray-400 text-sm capitalize">Panoramica di {currentMonth}.</p>
+          <p className="text-gray-500 text-sm">Panoramica di {currentMonth}.</p>
         </div>
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(+e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-        >
-          {years.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
+        <div className="flex items-center gap-2 shrink-0">
+          {isFetching && (
+            <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-500 rounded-full animate-spin" />
+          )}
+          <span className="text-xs text-gray-400 hidden sm:block">Anno</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(+e.target.value)}
+            className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          >
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
       </div>
+
+      {/* Empty state — nessuna transazione */}
+      {!hasTransactions && (
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-6 flex flex-col sm:flex-row items-start gap-4">
+          <div className="w-11 h-11 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+            <ArrowLeftRight size={19} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-indigo-900 text-base">Aggiungi la tua prima transazione</p>
+            <p className="text-sm text-indigo-600/80 mt-1 leading-relaxed">
+              I grafici e le analisi si attivano non appena inserisci entrate e uscite.
+              Puoi anche importare lo storico direttamente dal CSV della tua banca.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <button
+                onClick={() => navigate('/transactions')}
+                className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors"
+              >
+                + Aggiungi transazione
+              </button>
+              <button
+                onClick={() => navigate('/accounts')}
+                className="text-sm font-medium text-indigo-700 border border-indigo-200 bg-white px-4 py-2 rounded-xl hover:bg-indigo-50 transition-colors"
+              >
+                Configura i conti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
@@ -295,27 +334,41 @@ export function AnnualDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-600 mb-4">Reddito residuo per mese</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => formatCurrency(v, currency)} />
-              <Bar dataKey="residual" fill="#10b981" radius={[4, 4, 0, 0]} name="Residuo" />
-            </BarChart>
-          </ResponsiveContainer>
+          {hasTransactions ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => formatCurrency(v, currency)} />
+                <Bar dataKey="residual" fill="#10b981" radius={[4, 4, 0, 0]} name="Residuo" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-gray-300">
+              <BarChart2 size={36} strokeWidth={1.2} />
+              <p className="text-xs text-gray-400">Dati disponibili dopo la prima transazione</p>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-600 mb-4">Entrate vs Spese per mese</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => formatCurrency(v, currency)} />
-              <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={false} name="Entrate" />
-              <Line type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} dot={false} name="Spese" />
-            </LineChart>
-          </ResponsiveContainer>
+          {hasTransactions ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <LineChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => formatCurrency(v, currency)} />
+                <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={false} name="Entrate" />
+                <Line type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} dot={false} name="Spese" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-gray-300">
+              <BarChart2 size={36} strokeWidth={1.2} />
+              <p className="text-xs text-gray-400">Dati disponibili dopo la prima transazione</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
