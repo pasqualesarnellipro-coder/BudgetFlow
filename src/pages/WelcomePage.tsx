@@ -5,7 +5,7 @@ import { useAppStore } from '@/store/useAppStore'
 import {
   Tags, PieChart, ArrowLeftRight, RefreshCw, Target,
   FileText, Lightbulb, BarChart2, Layers, ArrowRight,
-  CheckCircle2, TrendingUp, Wallet, Trophy,
+  CheckCircle2, TrendingUp, Wallet, Trophy, UserCog,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -188,6 +188,24 @@ export function WelcomePage() {
                 }}
               />
             </div>
+          </div>
+
+          {/* Badge profilo — mostra esplicitamente il tipo configurato */}
+          <div className="flex items-center gap-2 mb-3 mt-1">
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
+              isFreelance ? 'bg-indigo-500/30 text-indigo-200' : 'bg-emerald-500/30 text-emerald-200'
+            }`}>
+              {profile?.profile_type === 'PERSONAL'  && '👤 Profilo: Privato'}
+              {profile?.profile_type === 'FREELANCE' && '💼 Profilo: Freelance / P.IVA'}
+              {profile?.profile_type === 'BOTH'      && '⚡ Profilo: Privato + Freelance'}
+            </span>
+            <button
+              onClick={() => navigate('/profile-setup')}
+              title="Modifica profilo e regime fiscale"
+              className="text-white/30 hover:text-white/70 transition-colors"
+            >
+              <UserCog size={13} />
+            </button>
           </div>
 
           {!allDone && (
