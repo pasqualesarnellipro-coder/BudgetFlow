@@ -1,0 +1,604 @@
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+import { useAppStore } from '@/store/useAppStore'
+import { DonutProgressRing } from '@/components/ui/DonutProgressRing'
+import { HelpTooltip } from '@/components/ui/HelpTooltip'
+import { formatCurrency } from '@/lib/formatters'
+import { Plus, Pencil, Trash2, PiggyBank, Target, CalendarDays, TrendingUp, Sparkles } from 'lucide-react'
+import type { SavingGoal } from '@/lib/database.types'
+
+const ICON_PRESETS = [
+  '✈️','🏖️','🌍','🗺️','🏔️',   // viaggi
+  '🏠','🏡','🏗️','🔑',           // casa
+  '🚗','🛵','🚲','🚢',            // mobilità
+  '💻','📱','🎮','📷','🎧',       // tech
+  '🎓','📚','🏫',                 // studio
+  '💍','💒','🥂',                 // matrimonio/eventi
+  '🐶','🐱','🐾',                 // animali
+  '👶','🍼',                      // famiglia
+  '🏋️','⚽','🎾','🎿',            // sport
+  '🎸','🎹','🎨',                 // hobby
+  '💰','🏦','📈','🛡️',            // finanza
+  '🎁','🎄',                      // regali/festività
+]
+
+// ─── Mappa keyword → icona ────────────────────────────────────────────────────
+const ICON_MAP: { keywords: string[]; icon: string }[] = [
+  { keywords: ['vacan', 'viag', 'volo', 'ferie', 'vacanz'], icon: '✈️' },
+  { keywords: ['spiag', 'mare', 'estate', 'resort', 'tropic'], icon: '🏖️' },
+  { keywords: ['mondo', 'giro', 'tour', 'avvent', 'esplor'], icon: '🌍' },
+  { keywords: ['mont', 'alpi', 'sci', 'neve', 'trekk'], icon: '🏔️' },
+  { keywords: ['casa', 'appartam', 'affitt', 'mutuo', 'acconto', 'immobil', 'abitaz'], icon: '🏠' },
+  { keywords: ['villa', 'seconda casa', 'casetta'], icon: '🏡' },
+  { keywords: ['ristruttur', 'lavori', 'cantiere', 'costruz'], icon: '🏗️' },
+  { keywords: ['auto', 'macch', 'moto', 'patente', 'veicolo', 'bmw', 'mercedes', 'ferrari', 'fiat'], icon: '🚗' },
+  { keywords: ['bici', 'ciclo', 'scooter', 'monopatt'], icon: '🛵' },
+  { keywords: ['barca', 'barchett', 'vela', 'nave'], icon: '🚢' },
+  { keywords: ['pc', 'laptop', 'computer', 'mac', 'macbook', 'notebook'], icon: '💻' },
+  { keywords: ['telefon', 'iphone', 'samsung', 'smartphone', 'cellu'], icon: '📱' },
+  { keywords: ['playstation', 'xbox', 'nintendo', 'gioc', 'gaming', 'ps5', 'ps4'], icon: '🎮' },
+  { keywords: ['fotoc', 'camera', 'obiettivo', 'foto', 'reflex'], icon: '📷' },
+  { keywords: ['cuffie', 'airpod', 'auricolar', 'audio', 'speaker'], icon: '🎧' },
+  { keywords: ['laure', 'universit', 'studio', 'corso', 'master', 'dottor', 'scuola', 'formaz'], icon: '🎓' },
+  { keywords: ['libri', 'libro'], icon: '📚' },
+  { keywords: ['matrimon', 'nozze', 'fidanzam', 'fede', 'anello', 'proposta'], icon: '💍' },
+  { keywords: ['cerimonia', 'festa', 'evento', 'complean', 'anniversar'], icon: '🥂' },
+  { keywords: ['cane', 'cucciolo', 'labrador', 'golden'], icon: '🐶' },
+  { keywords: ['gatto', 'micio', 'felino'], icon: '🐱' },
+  { keywords: ['animale', 'pet', 'veterinar'], icon: '🐾' },
+  { keywords: ['bambino', 'figlio', 'bimbo', 'bebè', 'bebe', 'nascita', 'cicogna', 'gravidanza'], icon: '👶' },
+  { keywords: ['palestra', 'fitness', 'allenamento', 'pesi', 'muscolaz'], icon: '🏋️' },
+  { keywords: ['calcio', 'sport', 'squadra', 'campion'], icon: '⚽' },
+  { keywords: ['tennis', 'padel', 'racchetta'], icon: '🎾' },
+  { keywords: ['musica', 'chitarra', 'strumento', 'concerto', 'band'], icon: '🎸' },
+  { keywords: ['pianofort', 'tastier'], icon: '🎹' },
+  { keywords: ['pittura', 'arte', 'disegno', 'quadro'], icon: '🎨' },
+  { keywords: ['fondo', 'emergenza', 'scorta', 'riserva', 'sicurezza', 'cuscinetto'], icon: '🛡️' },
+  { keywords: ['pensione', 'pensionamento', 'futuro', 'integrazione'], icon: '🏦' },
+  { keywords: ['investiment', 'azioni', 'borsa', 'cripto', 'bitcoin', 'etf'], icon: '📈' },
+  { keywords: ['risparmi', 'soldi', 'capital', 'liquidit'], icon: '💰' },
+  { keywords: ['regalo', 'regali', 'natale', 'dono', 'gift'], icon: '🎁' },
+]
+
+function suggestIcon(name: string): string | null {
+  const normalized = name.toLowerCase().trim()
+  if (!normalized) return null
+  for (const { keywords, icon } of ICON_MAP) {
+    if (keywords.some((k) => normalized.includes(k))) return icon
+  }
+  return null
+}
+
+const COLOR_PRESETS = [
+  '#f59e0b','#10b981','#6366f1','#f43f5e','#8b5cf6',
+  '#0ea5e9','#ec4899','#14b8a6','#f97316','#84cc16',
+]
+
+const emptyForm = () => ({
+  name: '',
+  icon: '🎯',
+  color: '#f59e0b',
+  target_amount: '',
+  current_amount: '',
+  deadline: '',
+})
+
+type FormState = ReturnType<typeof emptyForm>
+
+export function GoalsPage() {
+  const { profile, selectedYear } = useAppStore()
+  const qc = useQueryClient()
+  const currency = profile?.currency ?? 'EUR'
+
+  const [showModal, setShowModal] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<FormState>(emptyForm())
+  const [iconManual, setIconManual] = useState(false)   // true = utente ha scelto manualmente
+  const [suggestedIcon, setSuggestedIcon] = useState<string | null>(null)
+  const [addContribId, setAddContribId] = useState<string | null>(null)
+  const [contribAmount, setContribAmount] = useState('')
+
+  const { data: goals = [] } = useQuery({
+    queryKey: ['saving_goals', profile?.id, selectedYear],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('saving_goals')
+        .select('*')
+        .eq('user_id', profile!.id)
+        .eq('year', selectedYear)
+        .order('created_at', { ascending: true })
+      return data ?? []
+    },
+    enabled: !!profile,
+  })
+
+  const openNew = () => {
+    setForm(emptyForm())
+    setEditingId(null)
+    setIconManual(false)
+    setSuggestedIcon(null)
+    setShowModal(true)
+  }
+
+  const openEdit = (g: SavingGoal) => {
+    setForm({
+      name: g.name,
+      icon: g.icon,
+      color: g.color,
+      target_amount: String(g.target_amount),
+      current_amount: String(g.current_amount),
+      deadline: g.deadline ?? '',
+    })
+    setEditingId(g.id)
+    setIconManual(true)   // in edit mode l'icona è già stata scelta
+    setSuggestedIcon(null)
+    setShowModal(true)
+  }
+
+  // Gestione cambio nome con auto-suggestion icona
+  const handleNameChange = (name: string) => {
+    const suggestion = suggestIcon(name)
+    setSuggestedIcon(suggestion)
+    if (!iconManual && suggestion) {
+      setForm((f) => ({ ...f, name, icon: suggestion }))
+    } else {
+      setForm((f) => ({ ...f, name }))
+    }
+  }
+
+  // Click manuale su un'icona → blocca auto-suggestion
+  const handleIconSelect = (emoji: string) => {
+    setIconManual(true)
+    setSuggestedIcon(null)
+    setForm((f) => ({ ...f, icon: emoji }))
+  }
+
+  const handleSave = async () => {
+    if (!profile || !form.name || !form.target_amount) return
+    const payload = {
+      user_id: profile.id,
+      name: form.name,
+      icon: form.icon,
+      color: form.color,
+      target_amount: parseFloat(form.target_amount),
+      current_amount: parseFloat(form.current_amount || '0'),
+      deadline: form.deadline || null,
+      year: selectedYear,
+      category_id: null,
+    }
+    if (editingId) {
+      await supabase.from('saving_goals').update(payload).eq('id', editingId)
+    } else {
+      await supabase.from('saving_goals').insert(payload)
+    }
+    qc.invalidateQueries({ queryKey: ['saving_goals'] })
+    setShowModal(false)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Eliminare questo obiettivo?')) return
+    await supabase.from('saving_goals').delete().eq('id', id)
+    qc.invalidateQueries({ queryKey: ['saving_goals'] })
+  }
+
+  const handleAddContrib = async (goal: SavingGoal) => {
+    const amount = parseFloat(contribAmount)
+    if (!amount || amount <= 0) return
+    await supabase.from('saving_goals')
+      .update({ current_amount: goal.current_amount + amount })
+      .eq('id', goal.id)
+    qc.invalidateQueries({ queryKey: ['saving_goals'] })
+    setAddContribId(null)
+    setContribAmount('')
+  }
+
+  // Summary stats
+  const totalTarget = (goals as SavingGoal[]).reduce((s, g) => s + g.target_amount, 0)
+  const totalSaved = (goals as SavingGoal[]).reduce((s, g) => s + g.current_amount, 0)
+  const completed = (goals as SavingGoal[]).filter((g) => g.current_amount >= g.target_amount && g.target_amount > 0).length
+
+  return (
+    <div className="p-5 space-y-5 max-w-5xl">
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Obiettivi di Risparmio</h1>
+          <p className="text-sm text-gray-400 mt-0.5">Crea obiettivi personalizzati e tieni traccia dei progressi</p>
+        </div>
+        <button
+          onClick={openNew}
+          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700"
+        >
+          <Plus size={16} /> Nuovo obiettivo
+        </button>
+      </div>
+
+      {/* Riepilogo */}
+      {goals.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Target size={14} className="text-indigo-500" />
+              <span className="text-xs text-gray-400 uppercase tracking-wide">Obiettivo totale</span>
+            </div>
+            <p className="text-xl font-bold text-gray-900">{formatCurrency(totalTarget, currency)}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <PiggyBank size={14} className="text-amber-500" />
+              <span className="text-xs text-gray-400 uppercase tracking-wide">Risparmiato</span>
+            </div>
+            <p className="text-xl font-bold text-amber-600">{formatCurrency(totalSaved, currency)}</p>
+            <p className="text-xs text-gray-400">{totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0}% del totale</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp size={14} className="text-emerald-500" />
+              <span className="text-xs text-gray-400 uppercase tracking-wide">Completati</span>
+            </div>
+            <p className="text-xl font-bold text-emerald-600">{completed} / {goals.length}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Grid obiettivi */}
+      {goals.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-12 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+            <Target size={28} className="text-indigo-400" strokeWidth={1.5} />
+          </div>
+          <p className="text-gray-700 font-semibold text-lg">Nessun obiettivo ancora</p>
+          <p className="text-gray-400 text-sm mt-1 mb-5">Crea il tuo primo obiettivo: casa, vacanze, fondo emergenza…</p>
+          <button onClick={openNew} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700">
+            Crea il primo obiettivo
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {(goals as SavingGoal[]).map((g) => {
+            const pct = g.target_amount > 0 ? Math.min((g.current_amount / g.target_amount) * 100, 100) : 0
+            const remaining = Math.max(0, g.target_amount - g.current_amount)
+            const isComplete = pct >= 100
+
+            const deadlineDays = g.deadline
+              ? Math.ceil((new Date(g.deadline).getTime() - Date.now()) / 86400000)
+              : null
+
+            return (
+              <div
+                key={g.id}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col"
+                style={{ borderTop: `4px solid ${g.color}` }}
+              >
+                {/* Card header */}
+                <div className="px-5 pt-4 pb-2 flex items-start justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-3xl">{g.icon}</span>
+                    <div>
+                      <p className="font-semibold text-gray-900 text-sm">{g.name}</p>
+                      {g.deadline && (
+                        <p className={`text-xs flex items-center gap-1 mt-0.5 ${deadlineDays !== null && deadlineDays < 30 ? 'text-rose-500' : 'text-gray-400'}`}>
+                          <CalendarDays size={10} />
+                          {deadlineDays !== null && deadlineDays > 0
+                            ? `${deadlineDays} giorni`
+                            : deadlineDays === 0 ? 'Oggi!'
+                            : 'Scaduto'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => openEdit(g)} className="p-1.5 text-gray-300 hover:text-gray-600 rounded-lg hover:bg-gray-50">
+                      <Pencil size={13} />
+                    </button>
+                    <button onClick={() => handleDelete(g.id)} className="p-1.5 text-gray-300 hover:text-rose-500 rounded-lg hover:bg-rose-50">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Donut */}
+                <div className="flex justify-center py-3">
+                  <DonutProgressRing
+                    percentage={pct}
+                    color={isComplete ? '#10b981' : g.color}
+                    size={100}
+                    strokeWidth={10}
+                    centerLabel={isComplete ? '🎉' : `${Math.round(pct)}%`}
+                  />
+                </div>
+
+                {/* Stats */}
+                <div className="px-5 pb-2 space-y-1.5 text-sm flex-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Obiettivo</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(g.target_amount, currency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Risparmiato</span>
+                    <span className="font-semibold" style={{ color: g.color }}>{formatCurrency(g.current_amount, currency)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Manca ancora</span>
+                    <span className="font-medium text-gray-700">{formatCurrency(remaining, currency)}</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="px-5 pb-3">
+                  <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, backgroundColor: isComplete ? '#10b981' : g.color }}
+                    />
+                  </div>
+                </div>
+
+                {/* Aggiungi contributo */}
+                <div className="border-t border-gray-50 px-5 py-3">
+                  {isComplete ? (
+                    <p className="text-center text-xs font-semibold text-emerald-600">🎉 Obiettivo raggiunto!</p>
+                  ) : addContribId === g.id ? (
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">€</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0,00"
+                          value={contribAmount}
+                          onChange={(e) => setContribAmount(e.target.value)}
+                          autoFocus
+                          className="w-full border border-gray-200 rounded-lg pl-6 pr-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleAddContrib(g)}
+                        className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => { setAddContribId(null); setContribAmount('') }}
+                        className="text-gray-400 hover:text-gray-600 text-xs px-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setAddContribId(g.id); setContribAmount('') }}
+                      className="w-full text-xs font-medium py-1.5 rounded-lg border border-dashed border-gray-200 text-gray-400 hover:border-indigo-300 hover:text-indigo-600 transition-colors"
+                    >
+                      + Aggiungi risparmio
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Aggiungi nuovo card */}
+          <button
+            onClick={openNew}
+            className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-5 flex flex-col items-center justify-center gap-2 text-gray-300 hover:border-indigo-300 hover:text-indigo-400 transition-colors min-h-64"
+          >
+            <Plus size={28} />
+            <span className="text-sm font-medium">Nuovo obiettivo</span>
+          </button>
+        </div>
+      )}
+
+      {/* Modal crea/modifica */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+
+            {/* Header */}
+            <div className="px-6 pt-5 pb-4 border-b bg-gray-50 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {editingId ? 'Modifica obiettivo' : 'Nuovo obiettivo'}
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">Personalizza nome, icona, colore e importo</p>
+              </div>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+
+              {/* Preview live */}
+              <div
+                className="flex items-center gap-3 p-3 rounded-xl border-2"
+                style={{ borderColor: form.color, backgroundColor: form.color + '15' }}
+              >
+                <span className="text-3xl">{form.icon || '🎯'}</span>
+                <div>
+                  <p className="font-semibold text-gray-900">{form.name || 'Nome obiettivo'}</p>
+                  <p className="text-xs text-gray-500">{form.target_amount ? formatCurrency(parseFloat(form.target_amount), currency) : '€ 0'}</p>
+                </div>
+              </div>
+
+              {/* Nome */}
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                  Nome
+                  <HelpTooltip content="Dagli un nome chiaro: es. 'Vacanze Giappone 2026', 'Fondo emergenza', 'Acconto casa'." position="right" />
+                </label>
+                <input
+                  type="text"
+                  placeholder="Es. Vacanze, Fondo emergenza, Auto nuova…"
+                  value={form.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                  autoFocus
+                />
+              </div>
+
+              {/* Icona */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Icona
+                    <HelpTooltip content="L'icona viene suggerita automaticamente mentre scrivi il nome. Puoi sempre cambiarla manualmente." position="right" />
+                  </label>
+                  {suggestedIcon && !iconManual && (
+                    <span className="flex items-center gap-1 text-xs text-indigo-500 font-medium animate-pulse">
+                      <Sparkles size={11} />
+                      Suggerita automaticamente
+                    </span>
+                  )}
+                  {iconManual && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIconManual(false)
+                        const s = suggestIcon(form.name)
+                        if (s) { setSuggestedIcon(s); setForm((f) => ({ ...f, icon: s })) }
+                      }}
+                      className="text-xs text-gray-400 hover:text-indigo-500 transition-colors"
+                    >
+                      ↩ Ripristina suggerimento
+                    </button>
+                  )}
+                </div>
+
+                {/* Griglia emoji con scroll */}
+                <div className="grid grid-cols-8 gap-1.5 max-h-36 overflow-y-auto pr-1 mb-2">
+                  {ICON_PRESETS.map((emoji) => {
+                    const isSelected = form.icon === emoji
+                    const isSuggested = emoji === suggestedIcon && !iconManual
+                    return (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => handleIconSelect(emoji)}
+                        className={`relative w-full aspect-square rounded-xl text-xl flex items-center justify-center border-2 transition-all ${
+                          isSelected
+                            ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200 scale-110'
+                            : isSuggested
+                            ? 'border-indigo-300 bg-indigo-50/60'
+                            : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {emoji}
+                        {isSuggested && (
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full flex items-center justify-center">
+                            <Sparkles size={7} className="text-white" />
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="…oppure scrivi qualsiasi emoji"
+                  value={form.icon}
+                  onChange={(e) => { setIconManual(true); setForm((f) => ({ ...f, icon: e.target.value })) }}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                />
+              </div>
+
+              {/* Colore */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">Colore</label>
+                <div className="flex items-center gap-2">
+                  {COLOR_PRESETS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setForm({ ...form, color: c })}
+                      className={`w-7 h-7 rounded-full border-2 transition-all ${form.color === c ? 'border-gray-800 scale-110' : 'border-white shadow'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    value={form.color}
+                    onChange={(e) => setForm({ ...form, color: e.target.value })}
+                    className="w-7 h-7 rounded-full cursor-pointer border border-gray-200"
+                    title="Colore personalizzato"
+                  />
+                </div>
+              </div>
+
+              {/* Importo + Attuale */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Obiettivo (€)
+                    <HelpTooltip content="Quanto vuoi risparmiare in totale per questo obiettivo?" position="top" />
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={form.target_amount}
+                      onChange={(e) => setForm({ ...form, target_amount: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                    Già risparmiato
+                    <HelpTooltip content="Quanto hai già da parte per questo obiettivo? Puoi lasciare 0 se parti da zero." position="top" />
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={form.current_amount}
+                      onChange={(e) => setForm({ ...form, current_amount: e.target.value })}
+                      className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Scadenza */}
+              <div>
+                <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                  Scadenza <span className="font-normal text-gray-400 normal-case">(opzionale)</span>
+                  <HelpTooltip content="Entro quando vuoi raggiungere questo obiettivo? Ti mostreremo quanti giorni mancano." position="top" />
+                </label>
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                />
+              </div>
+
+              {/* CTA */}
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setShowModal(false)} className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl hover:bg-gray-50 text-sm">
+                  Annulla
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!form.name || !form.target_amount}
+                  className="flex-1 text-white font-semibold py-2.5 rounded-xl disabled:opacity-40 text-sm transition-colors hover:opacity-90"
+                  style={{ backgroundColor: form.color }}
+                >
+                  {editingId ? 'Salva modifiche' : 'Crea obiettivo'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
