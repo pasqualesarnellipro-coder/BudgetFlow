@@ -98,15 +98,19 @@ export function AccountsPage() {
   })
 
   // ─── CRUD ────────────────────────────────────────────────────────────────────
-  const openNew = () => { setForm(emptyForm()); setEditingId(null); setShowModal(true) }
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const openNew = () => { setForm(emptyForm()); setEditingId(null); setSaveError(null); setShowModal(true) }
   const openEdit = (a: BankAccount) => {
     setForm({ ...a })
     setEditingId(a.id)
+    setSaveError(null)
     setShowModal(true)
   }
 
   const handleSave = async () => {
     if (!profile || !form.name) return
+    setSaveError(null)
     const payload = {
       user_id: profile.id,
       name: form.name!,
@@ -119,13 +123,19 @@ export function AccountsPage() {
       is_default: form.is_default ?? false,
       notes: form.notes ?? null,
     }
-    if (editingId) {
-      await supabase.from('bank_accounts').update(payload).eq('id', editingId)
-    } else {
-      // Se è il primo conto, impostalo come default
-      if (accounts.length === 0) payload.is_default = true
-      await supabase.from('bank_accounts').insert(payload)
+    const { error } = editingId
+      ? await supabase.from('bank_accounts').update(payload).eq('id', editingId)
+      : await (async () => {
+          // Se è il primo conto, impostalo come default
+          if (accounts.length === 0) payload.is_default = true
+          return supabase.from('bank_accounts').insert(payload)
+        })()
+
+    if (error) {
+      setSaveError(`Errore nel salvataggio: ${error.message}`)
+      return
     }
+
     qc.invalidateQueries({ queryKey: ['bank_accounts'] })
     setShowModal(false)
   }
@@ -515,6 +525,14 @@ export function AccountsPage() {
                   className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
                 />
               </div>
+
+              {/* Errore salvataggio */}
+              {saveError && (
+                <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
+                  <span className="text-rose-500 text-sm shrink-0">⚠</span>
+                  <p className="text-xs text-rose-700">{saveError}</p>
+                </div>
+              )}
 
               {/* CTA */}
               <div className="flex gap-3 pt-1">
