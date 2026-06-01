@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { useAppStore } from '@/store/useAppStore'
+import { OnboardingBanner } from '@/components/ui/OnboardingBanner'
 
 export function AppLayout() {
   const profile = useAppStore((s) => s.profile)
@@ -14,8 +15,11 @@ export function AppLayout() {
         username={profile.name}
         currency={profile.currency}
       />
-      <main className="flex-1 overflow-y-auto bg-gray-50">
-        <Outlet />
+      <main className="flex-1 overflow-y-auto bg-gray-50 flex flex-col">
+        <div className="flex-1">
+          <Outlet />
+        </div>
+        <OnboardingBanner />
       </main>
     </div>
   )
