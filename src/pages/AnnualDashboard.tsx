@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { TrendingUp, TrendingDown, PiggyBank, CreditCard, Calculator, Landmark, ArrowLeftRight, BarChart2 } from 'lucide-react'
+import { LazyChart } from '@/components/ui/LazyChart'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { Transaction } from '@/lib/database.types'
 
@@ -28,7 +29,7 @@ export function AnnualDashboard() {
   const currentMonth = now.toLocaleString('it-IT', { month: 'long', year: 'numeric' })
   const isFreelance = profile?.profile_type === 'FREELANCE' || profile?.profile_type === 'BOTH'
 
-  const { data: transactions = [], isFetching } = useQuery({
+  const { data: transactions = [], isFetching, isLoading } = useQuery({
     queryKey: ['transactions', profile?.id, selectedYear],
     queryFn: async () => {
       const { data } = await supabase.from('transactions').select('*')
@@ -165,9 +166,20 @@ export function AnnualDashboard() {
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* KPI Cards — skeleton al primo caricamento (nessun dato in cache) */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-        {(Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
+        {isLoading ? (
+          [...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm animate-pulse">
+              <div className="flex items-center justify-between mb-3">
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+                <div className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-lg" />
+              </div>
+              <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-1" />
+              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-20" />
+            </div>
+          ))
+        ) : (Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
           const cfg = TYPE_CONFIG[type]
           const Icon = cfg.icon
           const eff = effectiveByType[type] ?? 0
@@ -335,14 +347,16 @@ export function AnnualDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Reddito residuo per mese</h2>
           {hasTransactions ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} />
-                <YAxis tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => formatCurrency(v, currency)} contentStyle={{ background: darkMode ? '#1e293b' : '#fff', border: '1px solid ' + (darkMode ? '#334155' : '#e5e7eb'), color: darkMode ? '#f1f5f9' : '#111827' }} />
-                <Bar dataKey="residual" fill="#10b981" radius={[4, 4, 0, 0]} name="Residuo" />
-              </BarChart>
-            </ResponsiveContainer>
+            <LazyChart height={180}>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} />
+                  <YAxis tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v, currency)} contentStyle={{ background: darkMode ? '#1e293b' : '#fff', border: '1px solid ' + (darkMode ? '#334155' : '#e5e7eb'), color: darkMode ? '#f1f5f9' : '#111827' }} />
+                  <Bar dataKey="residual" fill="#10b981" radius={[4, 4, 0, 0]} name="Residuo" />
+                </BarChart>
+              </ResponsiveContainer>
+            </LazyChart>
           ) : (
             <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-gray-300">
               <BarChart2 size={36} strokeWidth={1.2} />
@@ -354,7 +368,8 @@ export function AnnualDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm">
           <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Entrate vs Spese per mese</h2>
           {hasTransactions ? (
-            <ResponsiveContainer width="100%" height={180}>
+            <LazyChart height={180}>
+              <ResponsiveContainer width="100%" height={180}>
               <LineChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} />
                 <YAxis tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
@@ -362,7 +377,8 @@ export function AnnualDashboard() {
                 <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={false} name="Entrate" />
                 <Line type="monotone" dataKey="expenses" stroke="#f43f5e" strokeWidth={2} dot={false} name="Spese" />
               </LineChart>
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            </LazyChart>
           ) : (
             <div className="h-[180px] flex flex-col items-center justify-center gap-2 text-gray-300">
               <BarChart2 size={36} strokeWidth={1.2} />

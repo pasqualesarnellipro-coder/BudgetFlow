@@ -6,6 +6,7 @@ import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import { DonutProgressRing } from '@/components/ui/DonutProgressRing'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { ChevronLeft, ChevronRight, PieChart, ArrowRight } from 'lucide-react'
+import { LazyChart } from '@/components/ui/LazyChart'
 import type { Transaction, BudgetPlan, Category } from '@/lib/database.types'
 
 const TYPE_CONFIG = {
@@ -263,19 +264,21 @@ export function MonthlyDashboard() {
           {/* Effettivo vs Budget bar */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
             <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Effettivo vs Budget</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={barData} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-                <XAxis type="number" tick={{ fontSize: 10, fill: darkMode ? '#94a3b8' : '#6b7280' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} width={55} />
-                <Tooltip formatter={(v) => formatCurrency(Number(v), currency)} contentStyle={{ background: darkMode ? '#1e293b' : '#fff', border: '1px solid ' + (darkMode ? '#334155' : '#e5e7eb'), color: darkMode ? '#f1f5f9' : '#111827' }} />
-                <Bar dataKey="budget" name="Budget" fill="#e5e7eb" radius={[0, 3, 3, 0]} barSize={8} />
-                <Bar dataKey="effettivo" name="Effettivo" radius={[0, 3, 3, 0]} barSize={8}>
-                  {barData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <LazyChart height={200}>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={barData} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+                  <XAxis type="number" tick={{ fontSize: 10, fill: darkMode ? '#94a3b8' : '#6b7280' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} width={55} />
+                  <Tooltip formatter={(v) => formatCurrency(Number(v), currency)} contentStyle={{ background: darkMode ? '#1e293b' : '#fff', border: '1px solid ' + (darkMode ? '#334155' : '#e5e7eb'), color: darkMode ? '#f1f5f9' : '#111827' }} />
+                  <Bar dataKey="budget" name="Budget" fill="#e5e7eb" radius={[0, 3, 3, 0]} barSize={8} />
+                  <Bar dataKey="effettivo" name="Effettivo" radius={[0, 3, 3, 0]} barSize={8}>
+                    {barData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </LazyChart>
           </div>
 
           {/* Reddito residuo donuts */}
