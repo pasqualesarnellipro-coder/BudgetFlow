@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { TypeBadge } from '@/components/ui/TypeBadge'
 import { formatCurrency } from '@/lib/formatters'
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, PiggyBank, CreditCard, Upload, Download, SlidersHorizontal, ChevronUp, ChevronDown, X } from 'lucide-react'
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, PiggyBank, CreditCard, Upload, Download, SlidersHorizontal, ChevronUp, ChevronDown, X, Wallet } from 'lucide-react'
 import { ImportModal } from '@/components/import/ImportModal'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { Transaction, TransactionType, Category } from '@/lib/database.types'
@@ -45,6 +46,7 @@ const emptyForm = (): FormState => ({
 })
 
 export function TransactionsPage() {
+  const navigate = useNavigate()
   const { profile, selectedYear } = useAppStore()
   const qc = useQueryClient()
   const [showModal, setShowModal] = useState(false)
@@ -627,17 +629,28 @@ export function TransactionsPage() {
               </div>
 
               {/* Conto bancario */}
-              {accounts.length > 0 && (
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Conto <span className="normal-case font-normal text-gray-400">(opzionale)</span>
-                  </label>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  Conto <span className="normal-case font-normal text-gray-400 dark:text-gray-500">(opzionale)</span>
+                </label>
+                {accounts.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => { setShowModal(false); navigate('/accounts') }}
+                    className="flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400 border border-dashed border-indigo-300 dark:border-indigo-700 rounded-xl px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                  >
+                    <Wallet size={13} />
+                    Nessun conto configurato — clicca per aggiungerne uno
+                  </button>
+                ) : (
                   <div className="flex gap-2 flex-wrap">
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, account_id: '' })}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
-                        !form.account_id ? 'border-gray-400 bg-gray-100 text-gray-700' : 'border-gray-200 text-gray-400 hover:bg-gray-50'
+                        !form.account_id
+                          ? 'border-gray-400 bg-gray-100 dark:bg-gray-600 dark:border-gray-500 text-gray-700 dark:text-gray-200'
+                          : 'border-gray-200 dark:border-gray-600 text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
                       Nessuno
@@ -650,7 +663,7 @@ export function TransactionsPage() {
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
                           form.account_id === acc.id
                             ? 'ring-2 text-white'
-                            : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                            : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                         }`}
                         style={form.account_id === acc.id
                           ? { backgroundColor: acc.color, borderColor: acc.color }
@@ -661,8 +674,8 @@ export function TransactionsPage() {
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Business (solo freelance) */}
               {(profile?.profile_type === 'FREELANCE' || profile?.profile_type === 'BOTH') && (
