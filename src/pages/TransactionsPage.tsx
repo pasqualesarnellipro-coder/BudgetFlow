@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { TypeBadge } from '@/components/ui/TypeBadge'
 import { formatCurrency } from '@/lib/formatters'
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, PiggyBank, CreditCard, Upload } from 'lucide-react'
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, PiggyBank, CreditCard, Upload, Download, SlidersHorizontal, ChevronUp, ChevronDown, X } from 'lucide-react'
 import { ImportModal } from '@/components/import/ImportModal'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { Transaction, TransactionType, Category } from '@/lib/database.types'
@@ -52,7 +52,13 @@ export function TransactionsPage() {
   const [form, setForm] = useState<FormState>(emptyForm())
   const [editing, setEditing] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<TransactionType | 'ALL'>('ALL')
+  const [filterCategory, setFilterCategory] = useState('')
+  const [filterAccount, setFilterAccount] = useState('')
+  const [filterMonth, setFilterMonth] = useState(0)
   const [search, setSearch] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [sortField, setSortField] = useState<'date' | 'amount'>('date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(0)
   const PAGE_SIZE = 20
 
@@ -89,13 +95,61 @@ export function TransactionsPage() {
     enabled: !!profile,
   })
 
-  const filtered = transactions.filter((t: Transaction) => {
-    if (filterType !== 'ALL' && t.type !== filterType) return false
-    if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
-    return true
-  })
+  const filtered = transactions
+    .filter((t: Transaction) => {
+      if (filterType !== 'ALL' && t.type !== filterType) return false
+      if (filterCategory && t.category_id !== filterCategory) return false
+      if (filterAccount && t.account_id !== filterAccount) return false
+      if (filterMonth && new Date(t.date).getMonth() + 1 !== filterMonth) return false
+      if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    })
+    .sort((a: Transaction, b: Transaction) => {
+      const mult = sortDir === 'asc' ? 1 : -1
+      if (sortField === 'amount') return (a.amount - b.amount) * mult
+      return (a.date < b.date ? -1 : a.date > b.date ? 1 : 0) * mult
+    })
 
   const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+  const activeFilterCount = [filterCategory, filterAccount, filterMonth ? '1' : ''].filter(Boolean).length
+
+  const resetAdvanced = () => { setFilterCategory(''); setFilterAccount(''); setFilterMonth(0); setPage(0) }
+
+  const exportCSV = () => {
+    const header = ['Data', 'Tipo', 'Categoria', 'Descrizione', 'Importo', 'Conto']
+    const rows = filtered.map((t: Transaction) => [
+      t.date,
+      TYPE_UI[t.type as TransactionType].label,
+      `${getCatIcon(t.category_id)} ${getCatName(t.category_id)}`,
+      t.description,
+      t.amount,
+      accounts.find((a) => a.id === t.account_id)?.name ?? '',
+    ])
+    const csv = [header, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `transazioni-${selectedYear}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const toggleSort = (field: 'date' | 'amount') => {
+    if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortField(field); setSortDir('desc') }
+    setPage(0)
+  }
+
+  const SortIcon = ({ field }: { field: 'date' | 'amount' }) => {
+    if (sortField !== field) return <ChevronDown size={12} className="text-gray-300 ml-0.5" />
+    return sortDir === 'asc'
+      ? <ChevronUp size={12} className="text-indigo-500 ml-0.5" />
+      : <ChevronDown size={12} className="text-indigo-500 ml-0.5" />
+  }
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
 
   const catsByType = categories.filter((c: Category) => c.type === form.type)
@@ -189,7 +243,7 @@ export function TransactionsPage() {
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Transazioni</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Transazioni</h1>
         <div className="flex items-center gap-2">
           <HelpTooltip
             title="Transazioni"
@@ -198,8 +252,15 @@ export function TransactionsPage() {
             size="lg"
           />
           <button
+            onClick={exportCSV}
+            title="Esporta CSV"
+            className="flex items-center gap-2 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            <Download size={14} /> CSV
+          </button>
+          <button
             onClick={() => setShowImport(true)}
-            className="flex items-center gap-2 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50"
+            className="flex items-center gap-2 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <Upload size={14} /> Importa
           </button>
@@ -209,23 +270,87 @@ export function TransactionsPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 flex-wrap items-center">
-        <HelpTooltip content="Filtra le transazioni per parola chiave nella descrizione." position="bottom" />
-        <input
-          type="text"
-          placeholder="Cerca descrizione..."
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(0) }}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-income/50 w-52"
-        />
-        <select
-          value={filterType}
-          onChange={(e) => { setFilterType(e.target.value as TransactionType | 'ALL'); setPage(0) }}
-          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-income/50"
-        >
-          <option value="ALL">Tutti i tipi</option>
-          {TYPES.map((t) => <option key={t} value={t}>{TYPE_UI[t].label}</option>)}
-        </select>
+      {/* Filtri */}
+      <div className="space-y-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <input
+            type="text"
+            placeholder="Cerca descrizione..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0) }}
+            className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-income/50 w-48"
+          />
+          <select
+            value={filterType}
+            onChange={(e) => { setFilterType(e.target.value as TransactionType | 'ALL'); setFilterCategory(''); setPage(0) }}
+            className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-income/50"
+          >
+            <option value="ALL">Tutti i tipi</option>
+            {TYPES.map((t) => <option key={t} value={t}>{TYPE_UI[t].label}</option>)}
+          </select>
+          <button
+            onClick={() => setShowAdvanced((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+              showAdvanced || activeFilterCount > 0
+                ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
+          >
+            <SlidersHorizontal size={14} />
+            Filtri
+            {activeFilterCount > 0 && (
+              <span className="bg-indigo-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+          {activeFilterCount > 0 && (
+            <button onClick={resetAdvanced} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600">
+              <X size={12} /> Reset
+            </button>
+          )}
+          <span className="ml-auto text-xs text-gray-400">{filtered.length} risultati</span>
+        </div>
+
+        {showAdvanced && (
+          <div className="flex gap-2 flex-wrap items-center bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-700 rounded-xl px-4 py-3">
+            <select
+              value={filterMonth}
+              onChange={(e) => { setFilterMonth(+e.target.value); setPage(0) }}
+              className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
+            >
+              <option value={0}>Tutti i mesi</option>
+              {['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'].map((m, i) => (
+                <option key={i} value={i + 1}>{m}</option>
+              ))}
+            </select>
+            <select
+              value={filterCategory}
+              onChange={(e) => { setFilterCategory(e.target.value); setPage(0) }}
+              className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
+            >
+              <option value="">Tutte le categorie</option>
+              {(filterType === 'ALL'
+                ? categories
+                : categories.filter((c: Category) => c.type === filterType)
+              ).map((c: Category) => (
+                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+              ))}
+            </select>
+            {accounts.length > 0 && (
+              <select
+                value={filterAccount}
+                onChange={(e) => { setFilterAccount(e.target.value); setPage(0) }}
+                className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
+              >
+                <option value="">Tutti i conti</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.icon} {a.name}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Barra azioni bulk ────────────────────────────────────────────────── */}
@@ -292,10 +417,10 @@ export function TransactionsPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 text-xs text-gray-500 uppercase tracking-wide bg-gray-50">
+            <tr className="border-b border-gray-100 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50">
               {/* Checkbox seleziona tutto */}
               <th className="px-4 py-3 w-10">
                 <input
@@ -306,11 +431,19 @@ export function TransactionsPage() {
                   className="accent-indigo-600 w-4 h-4 cursor-pointer"
                 />
               </th>
-              <th className="text-left px-4 py-3">Data</th>
+              <th className="text-left px-4 py-3">
+                <button onClick={() => toggleSort('date')} className="flex items-center gap-0.5 hover:text-gray-700 transition-colors">
+                  Data <SortIcon field="date" />
+                </button>
+              </th>
               <th className="text-left px-4 py-3">Tipo</th>
               <th className="text-left px-4 py-3">Categoria</th>
               <th className="text-left px-4 py-3">Descrizione</th>
-              <th className="text-right px-4 py-3">Importo</th>
+              <th className="text-right px-4 py-3">
+                <button onClick={() => toggleSort('amount')} className="flex items-center gap-0.5 ml-auto hover:text-gray-700 transition-colors">
+                  Importo <SortIcon field="amount" />
+                </button>
+              </th>
               <th className="px-4 py-3 w-16"></th>
             </tr>
           </thead>
@@ -321,8 +454,8 @@ export function TransactionsPage() {
                 <tr
                   key={t.id}
                   onClick={() => toggleSelect(t.id)}
-                  className={`border-b border-gray-50 cursor-pointer transition-colors ${
-                    isSelected ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-gray-50'
+                  className={`border-b border-gray-50 dark:border-gray-700/50 cursor-pointer transition-colors ${
+                    isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
                   }`}
                 >
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -333,16 +466,16 @@ export function TransactionsPage() {
                       className="accent-indigo-600 w-4 h-4 cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{t.date}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{t.date}</td>
                   <td className="px-4 py-3"><TypeBadge type={t.type} /></td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1.5">
                       <span>{getCatIcon(t.category_id)}</span>
-                      <span className="text-gray-700">{getCatName(t.category_id)}</span>
+                      <span className="text-gray-700 dark:text-gray-300">{getCatName(t.category_id)}</span>
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-700 max-w-xs truncate" title={t.description}>{t.description}</td>
-                  <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-gray-900'}`}>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300 max-w-xs truncate" title={t.description}>{t.description}</td>
+                  <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-gray-900 dark:text-gray-100'}`}>
                     {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount, currency)}
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -360,8 +493,7 @@ export function TransactionsPage() {
           </tbody>
         </table>
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-            <span>{filtered.length} risultati</span>
+          <div className="flex items-center justify-end px-4 py-3 border-t border-gray-100 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
             <div className="flex gap-2">
               <button disabled={page === 0} onClick={() => setPage(p => p - 1)} className="px-2 py-1 rounded hover:bg-gray-100 disabled:opacity-40">←</button>
               <span>{page + 1} / {totalPages}</span>
@@ -373,24 +505,24 @@ export function TransactionsPage() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
 
             {/* Header colorato in base al tipo */}
-            <div className={`px-6 pt-5 pb-4 border-b ${TYPE_UI[form.type].bg}`}>
+            <div className={`px-6 pt-5 pb-4 border-b dark:border-gray-700 dark:bg-gray-700 ${TYPE_UI[form.type].bg}`}>
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                   {editing ? 'Modifica transazione' : 'Nuova transazione'}
                 </h2>
-                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 text-xl leading-none">×</button>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">Compila i campi qui sotto per registrare l'operazione</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Compila i campi qui sotto per registrare l'operazione</p>
             </div>
 
             <div className="px-6 py-5 space-y-5">
 
               {/* Step 1 — Tipo */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   1 · Che tipo di operazione è?
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -406,7 +538,7 @@ export function TransactionsPage() {
                         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all ${
                           active
                             ? `${ui.activeBg} ${ui.color} ring-2 ${ui.ring}`
-                            : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                            : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
                         }`}
                       >
                         <Icon
@@ -426,7 +558,7 @@ export function TransactionsPage() {
 
               {/* Step 2 — Categoria */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   2 · Categoria
                 </label>
                 {catsByType.length === 0 ? (
@@ -437,7 +569,7 @@ export function TransactionsPage() {
                   <select
                     value={form.category_id}
                     onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                   >
                     <option value="">— Scegli una categoria —</option>
                     {catsByType.map((c: Category) => (
@@ -449,12 +581,12 @@ export function TransactionsPage() {
 
               {/* Step 3 — Importo + Data */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   3 · Importo e data
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Importo</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Importo</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">€</span>
                       <input
@@ -464,17 +596,17 @@ export function TransactionsPage() {
                         placeholder="0,00"
                         value={form.amount}
                         onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                        className="w-full border border-gray-200 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                        className="w-full border border-gray-200 dark:border-gray-600 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Data</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data</label>
                     <input
                       type="date"
                       value={form.date}
                       onChange={(e) => setForm({ ...form, date: e.target.value })}
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                      className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                     />
                   </div>
                 </div>
@@ -482,15 +614,15 @@ export function TransactionsPage() {
 
               {/* Step 4 — Descrizione (opzionale) */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  4 · Descrizione <span className="normal-case font-normal text-gray-400">(opzionale)</span>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  4 · Descrizione <span className="normal-case font-normal text-gray-400 dark:text-gray-500">(opzionale)</span>
                 </label>
                 <input
                   type="text"
                   placeholder="Es. Supermercato Esselunga, rata mutuo maggio…"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                 />
               </div>
 
@@ -542,8 +674,8 @@ export function TransactionsPage() {
                     className="mt-0.5 w-4 h-4 rounded accent-indigo-600"
                   />
                   <div>
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Spesa business / deducibile</span>
-                    <p className="text-xs text-gray-400 mt-0.5">Spunta se è un costo legato alla tua attività freelance</p>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-100">Spesa business / deducibile</span>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Spunta se è un costo legato alla tua attività freelance</p>
                   </div>
                 </label>
               )}
@@ -552,7 +684,7 @@ export function TransactionsPage() {
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => setShowModal(false)}
-                  className="flex-1 border border-gray-200 text-gray-600 font-medium py-2.5 rounded-xl hover:bg-gray-50 text-sm"
+                  className="flex-1 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 font-medium py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
                 >
                   Annulla
                 </button>

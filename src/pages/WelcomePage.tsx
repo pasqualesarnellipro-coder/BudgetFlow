@@ -155,14 +155,14 @@ export function WelcomePage() {
 
       {/* Steps */}
       <div>
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3 px-1">
+        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 px-1">
           Primi passi consigliati
         </p>
         <div className="space-y-2">
           {steps.map((s) => (
             <div
               key={s.num}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-start gap-4 hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 flex items-start gap-4 hover:shadow-md transition-shadow"
               style={{ borderLeft: `3px solid ${s.borderColor}` }}
             >
               {/* Numero + icona */}
@@ -173,14 +173,14 @@ export function WelcomePage() {
                 >
                   <s.Icon size={17} strokeWidth={1.8} style={{ color: s.iconColor }} />
                 </div>
-                <span className="text-[10px] font-bold text-gray-300">{s.num}</span>
+                <span className="text-[10px] font-bold text-gray-300 dark:text-gray-600">{s.num}</span>
               </div>
 
               {/* Testo */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <p className="font-semibold text-gray-900 text-sm">{s.title}</p>
-                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full shrink-0">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{s.title}</p>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full shrink-0">
                     ~{s.time}
                   </span>
                 </div>

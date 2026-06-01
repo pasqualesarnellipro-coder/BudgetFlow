@@ -1,14 +1,17 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, CalendarDays, ArrowLeftRight, PieChart,
-  Target, RefreshCw, Tags, Briefcase, Settings, TrendingUp, Compass, Wallet,
+  Target, RefreshCw, Tags, Briefcase, Settings, TrendingUp, Compass, Wallet, X, Moon, Sun,
 } from 'lucide-react'
+import { useAppStore } from '@/store/useAppStore'
 import type { ProfileType } from '@/lib/database.types'
 
 interface Props {
   profileType: ProfileType
   username: string
   currency: string
+  isOpen?: boolean
+  onClose?: () => void
 }
 
 const navItems = [
@@ -25,19 +28,28 @@ const navItems = [
 const activeClass  = 'bg-white/12 text-white font-medium'
 const defaultClass = 'text-white/55 hover:text-white hover:bg-white/8'
 
-export function Sidebar({ profileType, username, currency }: Props) {
+export function Sidebar({ profileType, username, currency, isOpen = false, onClose }: Props) {
   const showFreelance = profileType === 'FREELANCE' || profileType === 'BOTH'
+  const { darkMode, toggleDarkMode } = useAppStore()
 
   return (
-    <aside className="w-60 h-screen bg-sidebar flex flex-col shrink-0 overflow-hidden">
+    <aside className={`w-60 h-screen bg-sidebar flex flex-col shrink-0 overflow-hidden fixed md:relative z-30 md:z-auto transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
 
       {/* Logo */}
       <div className="px-5 py-5 border-b border-white/8 shrink-0">
-        <div className="flex items-center gap-2.5 mb-1">
-          <div className="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center">
-            <TrendingUp size={14} className="text-white" />
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 bg-indigo-500 rounded-lg flex items-center justify-center">
+              <TrendingUp size={14} className="text-white" />
+            </div>
+            <span className="text-white font-bold text-base tracking-tight">BudgetFlow</span>
           </div>
-          <span className="text-white font-bold text-base tracking-tight">BudgetFlow</span>
+          <button
+            onClick={onClose}
+            className="md:hidden text-white/40 hover:text-white p-1 transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
         <p className="text-white/35 text-xs pl-0.5">{username} · {currency}</p>
       </div>
@@ -84,6 +96,13 @@ export function Sidebar({ profileType, username, currency }: Props) {
 
       {/* Footer — FISSO in basso, non scrolla mai */}
       <div className="shrink-0 px-3 pb-4 pt-3 border-t border-white/8 space-y-0.5">
+        <button
+          onClick={toggleDarkMode}
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${defaultClass}`}
+        >
+          {darkMode ? <Sun size={15} strokeWidth={1.8} /> : <Moon size={15} strokeWidth={1.8} />}
+          {darkMode ? 'Modalità chiara' : 'Modalità scura'}
+        </button>
         <NavLink
           to="/welcome"
           className={({ isActive }) =>

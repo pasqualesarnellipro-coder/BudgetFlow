@@ -15,7 +15,7 @@ const TYPE_CONFIG = {
 }
 
 export function MonthlyDashboard() {
-  const { profile, selectedYear, selectedMonth, setSelectedMonth } = useAppStore()
+  const { profile, selectedYear, selectedMonth, setSelectedMonth, darkMode } = useAppStore()
   const currency = profile?.currency ?? 'EUR'
   const monthName = MONTH_NAMES[selectedMonth - 1]
 
@@ -82,18 +82,18 @@ export function MonthlyDashboard() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard Mensile</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard Mensile</h1>
             {isFetching && (
               <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-500 rounded-full animate-spin" />
             )}
           </div>
-          <p className="text-gray-500 text-sm">{monthName} {selectedYear}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{monthName} {selectedYear}</p>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setSelectedMonth(Math.max(1, selectedMonth - 1))}
             disabled={selectedMonth === 1}
-            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors shrink-0"
+            className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors shrink-0"
           >
             <ChevronLeft size={15} />
           </button>
@@ -105,7 +105,7 @@ export function MonthlyDashboard() {
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   selectedMonth === i + 1
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
                 }`}
               >
                 {m}
@@ -115,7 +115,7 @@ export function MonthlyDashboard() {
           <button
             onClick={() => setSelectedMonth(Math.min(12, selectedMonth + 1))}
             disabled={selectedMonth === 12}
-            className="p-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-colors shrink-0"
+            className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors shrink-0"
           >
             <ChevronRight size={15} />
           </button>
@@ -133,8 +133,8 @@ export function MonthlyDashboard() {
           const isIncome = type === 'INCOME'
           const isGood = isIncome ? eff >= bud : eff <= bud
           return (
-            <div key={type} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col items-center gap-2">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{cfg.label}</span>
+            <div key={type} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4 flex flex-col items-center gap-2">
+              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{cfg.label}</span>
               <DonutProgressRing
                 percentage={pct}
                 color={cfg.color}
@@ -142,7 +142,7 @@ export function MonthlyDashboard() {
                 strokeWidth={9}
                 centerLabel={`${Math.round(pct)}%`}
               />
-              <p className="text-lg font-bold text-gray-900">{formatCurrency(eff, currency)}</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(eff, currency)}</p>
               {bud > 0 && (
                 <p className={`text-xs font-medium ${isGood ? 'text-emerald-500' : 'text-rose-400'}`}>
                   {isIncome
@@ -150,7 +150,7 @@ export function MonthlyDashboard() {
                     : (delta <= 0 ? `${formatCurrency(Math.abs(delta), currency)} sotto al budget` : `+${formatCurrency(delta, currency)} oltre`)}
                 </p>
               )}
-              <p className="text-xs text-gray-300">Budget: {formatCurrency(bud, currency)}</p>
+              <p className="text-xs text-gray-300 dark:text-gray-600">Budget: {formatCurrency(bud, currency)}</p>
             </div>
           )
         })}
@@ -167,19 +167,19 @@ export function MonthlyDashboard() {
             if (!typeCats.length) return null
             const isIncome = type === 'INCOME'
             return (
-              <div key={type} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div key={type} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
                 <div
                   className="px-5 py-3 flex items-center gap-2"
                   style={{ borderLeft: `4px solid ${cfg.color}` }}
                 >
-                  <span className="font-semibold text-gray-900 text-sm">{cfg.label}</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{cfg.label}</span>
                   <span className={`ml-auto text-xs font-semibold ${cfg.text}`}>
                     {formatCurrency(effectiveByType[type], currency)} / {formatCurrency(budgetByType[type], currency)}
                   </span>
                 </div>
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50">
+                    <tr className="text-xs text-gray-400 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50">
                       <th className="text-left px-5 py-2">Categoria</th>
                       <th className="text-right px-5 py-2">Obiettivo</th>
                       <th className="text-right px-5 py-2">Effettivo</th>
@@ -195,10 +195,10 @@ export function MonthlyDashboard() {
                       const pct = bud > 0 ? Math.round((eff / bud) * 100) : 0
                       const isGood = isIncome ? diff >= 0 : diff <= 0
                       return (
-                        <tr key={cat.id} className="border-t border-gray-50 hover:bg-gray-50/60">
-                          <td className="px-5 py-2.5 text-gray-700">{cat.icon} {cat.name}</td>
-                          <td className="px-5 py-2.5 text-right text-gray-400">{bud > 0 ? formatCurrency(bud, currency) : '—'}</td>
-                          <td className="px-5 py-2.5 text-right font-medium text-gray-900">{eff > 0 ? formatCurrency(eff, currency) : '—'}</td>
+                        <tr key={cat.id} className="border-t border-gray-50 dark:border-gray-700/50 hover:bg-gray-50/60 dark:hover:bg-gray-700/30">
+                          <td className="px-5 py-2.5 text-gray-700 dark:text-gray-300">{cat.icon} {cat.name}</td>
+                          <td className="px-5 py-2.5 text-right text-gray-400 dark:text-gray-500">{bud > 0 ? formatCurrency(bud, currency) : '—'}</td>
+                          <td className="px-5 py-2.5 text-right font-medium text-gray-900 dark:text-gray-100">{eff > 0 ? formatCurrency(eff, currency) : '—'}</td>
                           <td className={`px-5 py-2.5 text-right font-medium ${bud > 0 ? (isGood ? 'text-emerald-500' : 'text-rose-400') : 'text-gray-300'}`}>
                             {bud > 0 ? (diff >= 0 ? '+' : '') + formatCurrency(diff, currency) : '—'}
                           </td>
@@ -223,13 +223,13 @@ export function MonthlyDashboard() {
         <div className="space-y-4">
 
           {/* Effettivo vs Budget bar */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-600 mb-4">Effettivo vs Budget</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Effettivo vs Budget</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={barData} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-                <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={55} />
-                <Tooltip formatter={(v) => formatCurrency(Number(v), currency)} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: darkMode ? '#94a3b8' : '#6b7280' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: darkMode ? '#94a3b8' : '#6b7280' }} width={55} />
+                <Tooltip formatter={(v) => formatCurrency(Number(v), currency)} contentStyle={{ background: darkMode ? '#1e293b' : '#fff', border: '1px solid ' + (darkMode ? '#334155' : '#e5e7eb'), color: darkMode ? '#f1f5f9' : '#111827' }} />
                 <Bar dataKey="budget" name="Budget" fill="#e5e7eb" radius={[0, 3, 3, 0]} barSize={8} />
                 <Bar dataKey="effettivo" name="Effettivo" radius={[0, 3, 3, 0]} barSize={8}>
                   {barData.map((entry, i) => (
@@ -241,8 +241,8 @@ export function MonthlyDashboard() {
           </div>
 
           {/* Reddito residuo donuts */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-gray-600 mb-4">Reddito Residuo</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-4">Reddito Residuo</h3>
             <div className="space-y-4">
               {[
                 { label: 'Effettivo', value: netEffective, base: effectiveByType['INCOME'] },
@@ -260,9 +260,9 @@ export function MonthlyDashboard() {
                       centerLabel={`${Math.round(pct)}%`}
                     />
                     <div>
-                      <p className="text-xs text-gray-400">{item.label}</p>
-                      <p className="font-bold text-gray-900">{formatCurrency(item.value, currency)}</p>
-                      <p className="text-xs text-gray-400">di {formatCurrency(item.base, currency)}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{item.label}</p>
+                      <p className="font-bold text-gray-900 dark:text-gray-100">{formatCurrency(item.value, currency)}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">di {formatCurrency(item.base, currency)}</p>
                     </div>
                   </div>
                 )
@@ -271,8 +271,8 @@ export function MonthlyDashboard() {
           </div>
 
           {/* Quick summary */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-600">Riepilogo {monthName}</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">Riepilogo {monthName}</h3>
             {(Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
               const cfg = TYPE_CONFIG[type]
               const eff = effectiveByType[type] ?? 0
@@ -281,14 +281,14 @@ export function MonthlyDashboard() {
               return (
                 <div key={type} className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
-                  <span className="text-xs text-gray-500 flex-1">{cfg.label}</span>
-                  <span className="text-xs font-semibold text-gray-900">{formatCurrency(eff, currency)}</span>
-                  {bud > 0 && <span className="text-xs text-gray-400">{pct}%</span>}
+                  <span className="text-xs text-gray-500 dark:text-gray-400 flex-1">{cfg.label}</span>
+                  <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(eff, currency)}</span>
+                  {bud > 0 && <span className="text-xs text-gray-400 dark:text-gray-500">{pct}%</span>}
                 </div>
               )
             })}
-            <div className="border-t border-gray-100 pt-2 flex justify-between">
-              <span className="text-xs font-semibold text-gray-600">Saldo netto</span>
+            <div className="border-t border-gray-100 dark:border-gray-700 pt-2 flex justify-between">
+              <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Saldo netto</span>
               <span className={`text-xs font-bold ${netEffective >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                 {formatCurrency(netEffective, currency)}
               </span>

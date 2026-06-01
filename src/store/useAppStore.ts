@@ -9,10 +9,12 @@ interface AppState {
   selectedYear: number
   selectedMonth: number
   language: Language
+  darkMode: boolean
   setProfile: (profile: Profile | null) => void
   setSelectedYear: (year: number) => void
   setSelectedMonth: (month: number) => void
   setLanguage: (language: Language) => void
+  toggleDarkMode: () => void
   t: (key: TranslationKey) => string
 }
 
@@ -23,16 +25,18 @@ export const useAppStore = create<AppState>()(
       selectedYear: new Date().getFullYear(),
       selectedMonth: new Date().getMonth() + 1,
       language: 'it' as Language,
+      darkMode: false,
       setProfile: (profile) => set({ profile }),
       setSelectedYear: (selectedYear) => set({ selectedYear }),
       setSelectedMonth: (selectedMonth) => set({ selectedMonth }),
       setLanguage: (language) => set({ language }),
+      toggleDarkMode: () => set((s) => ({ darkMode: !s.darkMode })),
       t: (key: TranslationKey) => translate(get().language, key),
     }),
     {
       name: 'budgetflow-prefs',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ language: state.language }),
+      partialize: (state) => ({ language: state.language, darkMode: state.darkMode }),
     }
   )
 )

@@ -26,7 +26,11 @@ const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 1000 * 60 }
 function AuthGate() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const { profile, setProfile } = useAppStore()
+  const { profile, setProfile, darkMode } = useAppStore()
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {

@@ -62,16 +62,16 @@ export function OnboardingBanner() {
   }
 
   return (
-    <div className="sticky bottom-0 bg-white border-t border-indigo-100 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] px-5 py-3 flex items-center gap-3 z-10">
+    <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-indigo-100 dark:border-gray-700 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] px-5 py-3 flex items-center gap-3 z-10">
       <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0">
         <MapIcon size={14} className="text-white" />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] text-gray-400 leading-none mb-0.5">
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-none mb-0.5">
           Guida iniziale · Passo {stepNum} di {totalSteps}
         </p>
-        <p className="text-sm font-semibold text-gray-800 truncate">{current.label}</p>
+        <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{current.label}</p>
       </div>
 
       {/* Progress dots */}
@@ -82,7 +82,7 @@ export function OnboardingBanner() {
             className={`rounded-full transition-all ${
               i < stepNum ? 'w-4 h-1.5 bg-indigo-500' :
               i === stepIndex ? 'w-4 h-1.5 bg-indigo-300' :
-              'w-1.5 h-1.5 bg-gray-200'
+              'w-1.5 h-1.5 bg-gray-200 dark:bg-gray-600'
             }`}
           />
         ))}
@@ -98,7 +98,7 @@ export function OnboardingBanner() {
       <button
         onClick={handleDismiss}
         title="Nascondi guida"
-        className="shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
+        className="shrink-0 text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors"
       >
         <X size={15} />
       </button>
