@@ -1,13 +1,36 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Menu, TrendingUp } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { useAppStore } from '@/store/useAppStore'
 import { OnboardingBanner } from '@/components/ui/OnboardingBanner'
 
+// ── Titoli per ogni route ─────────────────────────────────────────────────────
+const ROUTE_TITLES: Record<string, string> = {
+  '/':              'Dashboard Annuale',
+  '/monthly':       'Dashboard Mensile',
+  '/transactions':  'Transazioni',
+  '/accounts':      'Conti',
+  '/budget':        'Budget Annuale',
+  '/goals':         'Obiettivi',
+  '/bills':         'Abbonamenti',
+  '/categories':    'Categorie',
+  '/freelance':     'Freelance Hub',
+  '/settings':      'Impostazioni',
+  '/welcome':       'Guida iniziale',
+  '/profile-setup': 'Modifica profilo',
+}
+
 export function AppLayout() {
   const profile = useAppStore((s) => s.profile)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { pathname } = useLocation()
+
+  // ── Titolo tab dinamico ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const pageTitle = ROUTE_TITLES[pathname]
+    document.title = pageTitle ? `${pageTitle} | BudgetFlow` : 'BudgetFlow'
+  }, [pathname])
 
   if (!profile) return null
 
