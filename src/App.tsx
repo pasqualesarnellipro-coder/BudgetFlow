@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
@@ -21,7 +21,14 @@ import { WelcomePage } from '@/pages/WelcomePage'
 import { FICCallbackPage } from '@/pages/auth/FICCallbackPage'
 import './index.css'
 
-const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 1000 * 60 } } })
+const qc = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60,        // 1 min — dati freschi per la navigazione normale
+      gcTime: 1000 * 60 * 5,       // 5 min — cache in memoria dopo unmount
+    },
+  },
+})
 
 function AuthGate() {
   const [user, setUser] = useState<User | null>(null)
@@ -32,24 +39,36 @@ function AuthGate() {
     document.documentElement.classList.toggle('dark', darkMode)
   }, [darkMode])
 
+  // ── Auth listener ──────────────────────────────────────────────────────────
+  // Usiamo SOLO onAuthStateChange (emette INITIAL_SESSION all'avvio).
+  // getSession() era ridondante e causava una doppia chiamata a setUser →
+  // doppio fetch del profilo ad ogni navigazione.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null)
-      setLoading(false)
-    })
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (!session) setProfile(null)
+      setLoading(false)
     })
     return () => sub.subscription.unsubscribe()
   }, [setProfile])
 
+  // ── Profile fetch via React Query ──────────────────────────────────────────
+  // queryKey stabile su user.id → deduplicazione automatica, cache 5 min.
+  // Se più componenti richiedessero il profilo, React Query servirebbe la cache.
+  const { data: fetchedProfile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('*').eq('id', user!.id).single()
+      return data ?? null
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,   // profilo stale dopo 5 min (non cambia spesso)
+    gcTime: 1000 * 60 * 10,
+  })
+
   useEffect(() => {
-    if (!user) return
-    supabase.from('profiles').select('*').eq('id', user.id).single().then(({ data }) => {
-      if (data) setProfile(data)
-    })
-  }, [user, setProfile])
+    if (fetchedProfile) setProfile(fetchedProfile)
+  }, [fetchedProfile, setProfile])
 
   if (loading) return (
     <div className="min-h-screen bg-sidebar flex items-center justify-center">
