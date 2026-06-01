@@ -96,7 +96,7 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
   }
 
   return (
-    <div className="min-h-screen bg-sidebar flex items-center justify-center p-4">
+    <div className="min-h-screen bg-sidebar flex flex-col items-center justify-start py-8 px-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
 
         {/* Header */}
