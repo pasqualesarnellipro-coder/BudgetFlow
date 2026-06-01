@@ -560,7 +560,7 @@ export function TransactionsPage() {
 
               {/* Step 2 — Categoria */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                <label htmlFor="tx-category" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   2 · Categoria
                 </label>
                 {catsByType.length === 0 ? (
@@ -569,6 +569,7 @@ export function TransactionsPage() {
                   </p>
                 ) : (
                   <select
+                    id="tx-category"
                     value={form.category_id}
                     onChange={(e) => setForm({ ...form, category_id: e.target.value })}
                     className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
@@ -583,15 +584,16 @@ export function TransactionsPage() {
 
               {/* Step 3 — Importo + Data */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                <p className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   3 · Importo e data
-                </label>
+                </p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Importo</label>
+                    <label htmlFor="tx-amount" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Importo</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">€</span>
                       <input
+                        id="tx-amount"
                         type="number"
                         min="0"
                         step="0.01"
@@ -603,8 +605,9 @@ export function TransactionsPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data</label>
+                    <label htmlFor="tx-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Data</label>
                     <input
+                      id="tx-date"
                       type="date"
                       value={form.date}
                       onChange={(e) => setForm({ ...form, date: e.target.value })}
@@ -616,10 +619,11 @@ export function TransactionsPage() {
 
               {/* Step 4 — Descrizione (opzionale) */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                <label htmlFor="tx-description" className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   4 · Descrizione <span className="normal-case font-normal text-gray-400 dark:text-gray-500">(opzionale)</span>
                 </label>
                 <input
+                  id="tx-description"
                   type="text"
                   placeholder="Es. Supermercato Esselunga, rata mutuo maggio…"
                   value={form.description}

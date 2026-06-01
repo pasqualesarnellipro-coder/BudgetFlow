@@ -91,10 +91,11 @@ export function MonthlyDashboard() {
           </div>
           <p className="text-gray-500 dark:text-gray-400 text-sm">{monthName} {selectedYear}</p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" role="tablist" aria-label="Seleziona mese">
           <button
             onClick={() => setSelectedMonth(Math.max(1, selectedMonth - 1))}
             disabled={selectedMonth === 1}
+            aria-label="Mese precedente"
             className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors shrink-0"
           >
             <ChevronLeft size={15} />
@@ -103,6 +104,8 @@ export function MonthlyDashboard() {
             {MONTH_NAMES.map((m, i) => (
               <button
                 key={m}
+                role="tab"
+                aria-selected={selectedMonth === i + 1}
                 onClick={() => setSelectedMonth(i + 1)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   selectedMonth === i + 1
@@ -117,6 +120,7 @@ export function MonthlyDashboard() {
           <button
             onClick={() => setSelectedMonth(Math.min(12, selectedMonth + 1))}
             disabled={selectedMonth === 12}
+            aria-label="Mese successivo"
             className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 transition-colors shrink-0"
           >
             <ChevronRight size={15} />

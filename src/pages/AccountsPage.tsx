@@ -367,8 +367,9 @@ export function AccountsPage() {
 
               {/* Nome */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Nome conto</label>
+                <label htmlFor="acc-name" className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Nome conto</label>
                 <input
+                  id="acc-name"
                   type="text"
                   placeholder="Es. Conto ING principale, Carta Visa…"
                   value={form.name ?? ''}
@@ -406,10 +407,11 @@ export function AccountsPage() {
               {/* Saldo + Valuta */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Saldo attuale</label>
+                  <label htmlFor="acc-balance" className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Saldo attuale</label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
                     <input
+                      id="acc-balance"
                       type="number"
                       step="0.01"
                       value={form.balance ?? 0}
@@ -419,8 +421,9 @@ export function AccountsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Valuta</label>
+                  <label htmlFor="acc-currency" className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Valuta</label>
                   <select
+                    id="acc-currency"
                     value={form.currency ?? 'EUR'}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
@@ -475,8 +478,9 @@ export function AccountsPage() {
 
               {/* Note */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Note (opzionale)</label>
+                <label htmlFor="acc-notes" className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Note (opzionale)</label>
                 <input
+                  id="acc-notes"
                   type="text"
                   placeholder="Es. IBAN, numero carta, note personali…"
                   value={form.notes ?? ''}

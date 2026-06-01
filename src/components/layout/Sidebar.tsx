@@ -33,7 +33,7 @@ export function Sidebar({ profileType, username, currency, isOpen = false, onClo
   const { darkMode, toggleDarkMode } = useAppStore()
 
   return (
-    <aside className={`w-60 h-screen bg-sidebar flex flex-col shrink-0 overflow-hidden fixed md:relative z-30 md:z-auto transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+    <aside id="sidebar-nav" aria-label="Navigazione principale" className={`w-60 h-screen bg-sidebar flex flex-col shrink-0 overflow-hidden fixed md:relative z-30 md:z-auto transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
 
       {/* Logo */}
       <div className="px-5 py-5 border-b border-white/8 shrink-0">

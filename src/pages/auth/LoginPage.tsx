@@ -225,10 +225,12 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
+                aria-label={mode === 'login' ? 'Accedi' : mode === 'signup' ? 'Crea account' : 'Invia link reset'}
+                aria-busy={loading}
                 className="w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
               >
                 {loading ? (
-                  <RefreshCw size={16} className="animate-spin" />
+                  <><RefreshCw size={16} className="animate-spin" /><span className="sr-only">Caricamento…</span></>
                 ) : (
                   <>
                     {mode === 'login'  && 'Accedi'}
