@@ -12,7 +12,7 @@ import {
 } from '@/lib/fiscalePlanning'
 import type { Invoice, InvoiceStatus } from '@/lib/database.types'
 import {
-  Plus, Trash2, TrendingUp, Euro, Wallet, ShieldCheck,
+  Plus, Trash2, RefreshCw, TrendingUp, Euro, Wallet, ShieldCheck,
   CalendarClock, ChevronDown, ChevronUp, Info, BarChart2, Upload,
 } from 'lucide-react'
 import { InvoiceImportModal } from '@/components/import/InvoiceImportModal'
@@ -166,7 +166,17 @@ export function FreelanceHub() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Freelance Hub</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Freelance Hub</h1>
+        <button
+          onClick={() => qc.refetchQueries({ queryKey: ['invoices'] })}
+          disabled={invoicesLoading}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 border border-gray-200 hover:border-indigo-300 px-3 py-1.5 rounded-xl transition-colors disabled:opacity-40"
+        >
+          <RefreshCw size={14} className={invoicesLoading ? 'animate-spin' : ''} />
+          Aggiorna
+        </button>
+      </div>
 
       {/* Soglia Forfettaria */}
       <div className="bg-white rounded-xl shadow-sm p-5">
