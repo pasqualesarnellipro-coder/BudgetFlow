@@ -24,6 +24,13 @@ const ROUTE_TITLES: Record<string, string> = {
 export function AppLayout() {
   const profile = useAppStore((s) => s.profile)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem('bf_sidebar_collapsed') === 'true'
+  )
+  const toggleCollapse = () => setSidebarCollapsed((v) => {
+    localStorage.setItem('bf_sidebar_collapsed', String(!v))
+    return !v
+  })
   const { pathname } = useLocation()
 
   // ── Titolo tab dinamico ──────────────────────────────────────────────────────
@@ -50,6 +57,8 @@ export function AppLayout() {
         currency={profile.currency}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleCollapse}
       />
 
       <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 flex flex-col min-w-0">
