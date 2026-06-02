@@ -24,7 +24,7 @@ import * as XLSX from 'xlsx'
 import {
   Upload, X, CheckCircle2, AlertTriangle, RefreshCw,
   Sparkles, FileText, FileSpreadsheet, FileScan,
-  Pencil, ChevronRight, Info,
+  Pencil, ChevronRight, Info, CheckSquare,
 } from 'lucide-react'
 import type { InvoiceStatus } from '@/lib/database.types'
 
@@ -511,24 +511,42 @@ export function InvoiceImportModal({ onClose }: Props) {
         }
       })
 
-    // ── DEBUG: verifica dati prima dell'insert ─────────────────────────────
     if (toInsert.length === 0) {
       setError('Nessuna fattura selezionata da importare.')
       setLoading(false); setLoadingMsg(''); return
     }
 
-    // Test insert sul primo record per vedere la risposta Supabase
-    const testRecord = toInsert[0]
-    const { error: testError } = await supabase.from('invoices').insert([testRecord])
-    if (testError) {
-      setError(`Errore Supabase (codice ${testError.code}): ${testError.message}\n\nDettagli: ${testError.details ?? ''}\nHint: ${testError.hint ?? ''}\n\nRecord tentato:\nuser_id=${testRecord.user_id}\ndate=${testRecord.date_issued}\namount=${testRecord.amount_gross}`)
-      setLoading(false); setLoadingMsg(''); return
+    // ── Deduplicazione: scarica le fatture già esistenti per confronto ────────
+    setLoadingMsg('Controllo duplicati...')
+    const dateMin = toInsert.reduce((m, r) => r.date_issued < m ? r.date_issued : m, toInsert[0].date_issued)
+    const dateMax = toInsert.reduce((m, r) => r.date_issued > m ? r.date_issued : m, toInsert[0].date_issued)
+    const { data: existing } = await supabase
+      .from('invoices')
+      .select('client_name, date_issued, amount_gross')
+      .eq('user_id', profile.id)
+      .gte('date_issued', dateMin)
+      .lte('date_issued', dateMax)
+
+    const existingKeys = new Set(
+      (existing ?? []).map((e) => `${e.date_issued}|${e.client_name}|${e.amount_gross}`)
+    )
+
+    const newOnly = toInsert.filter(
+      (r) => !existingKeys.has(`${r.date_issued}|${r.client_name}|${r.amount_gross}`)
+    )
+
+    if (newOnly.length === 0) {
+      setImportedCount(0)
+      setLoading(false); setLoadingMsg('')
+      setStep('done')
+      return
     }
 
-    // Se il primo va, inserisco gli altri
+    // Insert a blocchi
+    setLoadingMsg('Salvataggio fatture...')
     const CHUNK = 20
-    for (let i = 1; i < toInsert.length; i += CHUNK) {
-      const { error } = await supabase.from('invoices').insert(toInsert.slice(i, Math.min(i + CHUNK, toInsert.length)))
+    for (let i = 0; i < newOnly.length; i += CHUNK) {
+      const { error } = await supabase.from('invoices').insert(newOnly.slice(i, Math.min(i + CHUNK, newOnly.length)))
       if (error) {
         setError(`Errore Supabase (record ${i}+): ${error.message}`)
         setLoading(false); setLoadingMsg(''); return
@@ -537,7 +555,7 @@ export function InvoiceImportModal({ onClose }: Props) {
 
     await qc.invalidateQueries({ queryKey: ['invoices'] })
     await qc.refetchQueries({ queryKey: ['invoices'] })
-    setImportedCount(toInsert.length)
+    setImportedCount(newOnly.length)
     setLoading(false)
     setLoadingMsg('')
     setStep('done')
@@ -1008,11 +1026,11 @@ export function InvoiceImportModal({ onClose }: Props) {
 
           {step === 'done' && importedCount === 0 && (
             <div className="flex flex-col items-center justify-center py-12 px-8 gap-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center">
-                <AlertTriangle size={32} className="text-rose-500" strokeWidth={1.8} />
+              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center">
+                <CheckSquare size={32} className="text-amber-500" strokeWidth={1.8} />
               </div>
-              <p className="text-xl font-bold text-rose-600">Import non riuscito</p>
-              <p className="text-sm text-gray-500">0 fatture salvate — riprova o contatta il supporto.</p>
+              <p className="text-xl font-bold text-amber-700">Nessuna novità</p>
+              <p className="text-sm text-gray-500">Tutte le fatture del file erano già presenti — nessun duplicato inserito.</p>
               <button onClick={onClose} className="border border-gray-200 text-gray-600 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50">
                 Chiudi
               </button>

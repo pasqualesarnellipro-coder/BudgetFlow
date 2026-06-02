@@ -14,6 +14,7 @@ import type { Invoice, InvoiceStatus } from '@/lib/database.types'
 import {
   Plus, Trash2, RefreshCw, TrendingUp, Euro, Wallet, ShieldCheck,
   CalendarClock, ChevronDown, ChevronUp, Info, BarChart2, Upload,
+  ArrowUpDown, ArrowUp, ArrowDown, CheckSquare, Square,
 } from 'lucide-react'
 import { InvoiceImportModal } from '@/components/import/InvoiceImportModal'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
@@ -42,6 +43,10 @@ export function FreelanceHub() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const [showFiscale, setShowFiscale] = useState(true)
   const [showInvoiceImport, setShowInvoiceImport] = useState(false)
+  const [sortCol, setSortCol] = useState<'date_issued' | 'client_name' | 'amount_gross' | 'due_date' | 'status'>('date_issued')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set())
+  const [editingStatusId, setEditingStatusId] = useState<string | null>(null)
   const [invoiceForm, setInvoiceForm] = useState({
     date_issued: new Date().toISOString().slice(0, 10),
     client_name: '',
@@ -146,7 +151,43 @@ export function FreelanceHub() {
   const handleDeleteInvoice = async (id: string) => {
     if (!confirm('Eliminare questa fattura?')) return
     await supabase.from('invoices').delete().eq('id', id)
+    setSelectedInvoices((prev) => { const next = new Set(prev); next.delete(id); return next })
     qc.invalidateQueries({ queryKey: ['invoices'] })
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selectedInvoices.size === 0) return
+    if (!confirm(`Eliminare ${selectedInvoices.size} fatture selezionate?`)) return
+    await supabase.from('invoices').delete().in('id', [...selectedInvoices])
+    setSelectedInvoices(new Set())
+    qc.invalidateQueries({ queryKey: ['invoices'] })
+  }
+
+  const handleUpdateStatus = async (id: string, status: InvoiceStatus) => {
+    await supabase.from('invoices').update({ status }).eq('id', id)
+    setEditingStatusId(null)
+    qc.invalidateQueries({ queryKey: ['invoices'] })
+  }
+
+  const handleSort = (col: typeof sortCol) => {
+    if (sortCol === col) setSortDir((d) => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('asc') }
+  }
+
+  const sortedInvoices = useMemo(() => {
+    return [...invoices].sort((a: Invoice, b: Invoice) => {
+      let va: string | number = a[sortCol] ?? ''
+      let vb: string | number = b[sortCol] ?? ''
+      if (sortCol === 'amount_gross') { va = Number(va); vb = Number(vb) }
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }, [invoices, sortCol, sortDir])
+
+  const allSelected = sortedInvoices.length > 0 && sortedInvoices.every((inv: Invoice) => selectedInvoices.has(inv.id))
+  const toggleAll = () => {
+    if (allSelected) setSelectedInvoices(new Set())
+    else setSelectedInvoices(new Set(sortedInvoices.map((inv: Invoice) => inv.id)))
   }
 
   const sogliaColor = sogliaPercent < 60 ? '#10b981' : sogliaPercent < 85 ? '#f59e0b' : '#f43f5e'
@@ -558,8 +599,20 @@ export function FreelanceHub() {
 
       {/* Fatture Emesse */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Fatture Emesse</h2>
+        {/* Header */}
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 flex-wrap">
+          <h2 className="font-semibold text-gray-900 mr-auto">
+            Fatture Emesse
+            {invoices.length > 0 && <span className="ml-2 text-xs text-gray-400 font-normal">{invoices.length} totali</span>}
+          </h2>
+          {selectedInvoices.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-1.5 border border-rose-200 text-rose-600 bg-rose-50 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-rose-100 transition-colors"
+            >
+              <Trash2 size={12} /> Elimina selezionate ({selectedInvoices.size})
+            </button>
+          )}
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowInvoiceImport(true)}
@@ -578,47 +631,115 @@ export function FreelanceHub() {
             <Plus size={13} /> Aggiungi
           </button>
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs text-gray-500 uppercase tracking-wide">
-              <th className="text-left px-5 py-3">Data</th>
-              <th className="text-left px-5 py-3">Cliente</th>
-              <th className="text-right px-5 py-3">Lordo</th>
-              <th className="text-right px-5 py-3">Netto</th>
-              <th className="text-right px-5 py-3">Tasse+INPS</th>
-              <th className="text-left px-5 py-3">Stato</th>
-              <th className="px-5 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv: Invoice) => (
-              <tr key={inv.id} className="border-t border-gray-50 hover:bg-gray-50">
-                <td className="px-5 py-3 text-gray-500">{inv.date_issued}</td>
-                <td className="px-5 py-3 font-medium text-gray-900">{inv.client_name}</td>
-                <td className="px-5 py-3 text-right font-medium text-gray-900">{formatCurrency(inv.amount_gross, currency)}</td>
-                <td className="px-5 py-3 text-right text-emerald-600 font-medium">{formatCurrency(inv.amount_net, currency)}</td>
-                <td className="px-5 py-3 text-right text-rose-500">{formatCurrency(inv.tax_amount + inv.inps_amount, currency)}</td>
-                <td className="px-5 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[inv.status]}`}>
-                    {STATUS_LABELS[inv.status]}
-                  </span>
-                </td>
-                <td className="px-5 py-3">
-                  <button onClick={() => handleDeleteInvoice(inv.id)} className="p-1 text-gray-400 hover:text-rose-500">
-                    <Trash2 size={14} />
+
+        {/* Tabella */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-500 uppercase tracking-wide bg-gray-50">
+                {/* Checkbox seleziona tutto */}
+                <th className="px-4 py-3 w-8">
+                  <button onClick={toggleAll} className="text-gray-400 hover:text-indigo-600 transition-colors">
+                    {allSelected ? <CheckSquare size={15} className="text-indigo-500" /> : <Square size={15} />}
                   </button>
-                </td>
+                </th>
+                {([
+                  { col: 'date_issued',   label: 'Data',      align: 'left'  },
+                  { col: 'client_name',   label: 'Cliente',   align: 'left'  },
+                  { col: 'amount_gross',  label: 'Lordo',     align: 'right' },
+                  { col: null,            label: 'Netto',     align: 'right' },
+                  { col: null,            label: 'Tasse+INPS',align: 'right' },
+                  { col: 'due_date',      label: 'Scadenza',  align: 'left'  },
+                  { col: 'status',        label: 'Stato',     align: 'left'  },
+                ] as { col: typeof sortCol | null; label: string; align: string }[]).map(({ col, label, align }) => (
+                  <th
+                    key={label}
+                    className={`px-4 py-3 text-${align} ${col ? 'cursor-pointer select-none hover:text-indigo-600' : ''} whitespace-nowrap`}
+                    onClick={() => col && handleSort(col)}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {label}
+                      {col && (
+                        sortCol === col
+                          ? sortDir === 'asc' ? <ArrowUp size={11} className="text-indigo-500" /> : <ArrowDown size={11} className="text-indigo-500" />
+                          : <ArrowUpDown size={11} className="text-gray-300" />
+                      )}
+                    </span>
+                  </th>
+                ))}
+                <th className="px-4 py-3 w-8" />
               </tr>
-            ))}
-            {invoices.length === 0 && (
-              <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-gray-400 text-sm">
-                  Nessuna fattura registrata
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sortedInvoices.map((inv: Invoice) => {
+                const isSelected = selectedInvoices.has(inv.id)
+                const isEditingStatus = editingStatusId === inv.id
+                return (
+                  <tr
+                    key={inv.id}
+                    className={`border-t border-gray-50 transition-colors ${isSelected ? 'bg-indigo-50/40' : 'hover:bg-gray-50'}`}
+                  >
+                    {/* Checkbox */}
+                    <td className="px-4 py-2.5">
+                      <button
+                        onClick={() => setSelectedInvoices((prev) => {
+                          const next = new Set(prev)
+                          next.has(inv.id) ? next.delete(inv.id) : next.add(inv.id)
+                          return next
+                        })}
+                        className="text-gray-300 hover:text-indigo-500 transition-colors"
+                      >
+                        {isSelected ? <CheckSquare size={15} className="text-indigo-500" /> : <Square size={15} />}
+                      </button>
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-500 text-xs font-mono whitespace-nowrap">{inv.date_issued}</td>
+                    <td className="px-4 py-2.5 font-medium text-gray-900 max-w-[180px] truncate" title={inv.client_name}>{inv.client_name}</td>
+                    <td className="px-4 py-2.5 text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(inv.amount_gross, currency)}</td>
+                    <td className="px-4 py-2.5 text-right text-emerald-600 font-medium whitespace-nowrap">{formatCurrency(inv.amount_net, currency)}</td>
+                    <td className="px-4 py-2.5 text-right text-rose-500 whitespace-nowrap">{formatCurrency(inv.tax_amount + inv.inps_amount, currency)}</td>
+                    <td className="px-4 py-2.5 text-xs text-gray-400 whitespace-nowrap">{inv.due_date || '—'}</td>
+                    {/* Stato — click per modificare */}
+                    <td className="px-4 py-2.5">
+                      {isEditingStatus ? (
+                        <select
+                          autoFocus
+                          defaultValue={inv.status}
+                          onChange={(e) => handleUpdateStatus(inv.id, e.target.value as InvoiceStatus)}
+                          onBlur={() => setEditingStatusId(null)}
+                          className="border border-indigo-300 rounded-lg px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                        >
+                          <option value="PENDING">In attesa</option>
+                          <option value="PAID">Pagata</option>
+                          <option value="OVERDUE">Scaduta</option>
+                        </select>
+                      ) : (
+                        <button
+                          onClick={() => setEditingStatusId(inv.id)}
+                          title="Clicca per cambiare stato"
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium cursor-pointer hover:opacity-80 transition-opacity ${STATUS_COLORS[inv.status]}`}
+                        >
+                          {STATUS_LABELS[inv.status]}
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <button onClick={() => handleDeleteInvoice(inv.id)} className="p-1 text-gray-300 hover:text-rose-500 transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+              {invoices.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-5 py-10 text-center text-gray-400 text-sm">
+                    Nessuna fattura registrata
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Modal nuova fattura */}
