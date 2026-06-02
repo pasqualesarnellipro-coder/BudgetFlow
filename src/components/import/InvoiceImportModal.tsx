@@ -512,22 +512,20 @@ export function InvoiceImportModal({ onClose }: Props) {
         }
       })
 
-    let inserted = 0
     const CHUNK = 20
     for (let i = 0; i < toInsert.length; i += CHUNK) {
-      const { error, data } = await supabase.from('invoices').insert(toInsert.slice(i, i + CHUNK)).select('id')
+      const { error } = await supabase.from('invoices').insert(toInsert.slice(i, i + CHUNK))
       if (error) {
         setError(`Errore Supabase: ${error.message}`)
         setLoading(false)
         setLoadingMsg('')
         return
       }
-      inserted += data?.length ?? 0
     }
 
     await qc.invalidateQueries({ queryKey: ['invoices'] })
     await qc.refetchQueries({ queryKey: ['invoices'] })
-    setImportedCount(inserted)
+    setImportedCount(toInsert.length)
     setLoading(false)
     setLoadingMsg('')
     setStep('done')
