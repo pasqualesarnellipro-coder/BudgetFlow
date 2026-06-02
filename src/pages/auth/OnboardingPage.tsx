@@ -282,37 +282,21 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">ore/sett</span>
                         </div>
                         {oreDipendente > 0 && !casoSpeciale && (
-                          <div className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors ${
-                            oreDipendente >= 25 ? 'bg-emerald-100' : 'bg-violet-100'
-                          }`}>
-                            <span className={`text-xs font-bold ${oreDipendente >= 25 ? 'text-emerald-700' : 'text-violet-700'}`}>
-                              {oreDipendente >= 25 ? '0%' : '13.12%'}
-                            </span>
-                            <span className={`text-xs ${oreDipendente >= 25 ? 'text-emerald-600' : 'text-violet-500'}`}>
-                              {oreDipendente >= 25 ? 'sulla P.IVA ✓' : 'applicato ✓'}
-                            </span>
+                          <div className="flex items-center gap-1.5 px-3 py-2 bg-violet-100 rounded-xl">
+                            <span className="text-xs font-bold text-violet-700">13.12%</span>
+                            <span className="text-xs text-violet-500">applicato ✓</span>
                           </div>
                         )}
                       </div>
 
-                      {/* Messaggio contestuale in base alle ore */}
-                      {oreDipendente >= 25 && !casoSpeciale ? (
-                        <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex gap-2.5">
-                          <span className="text-lg shrink-0">🎉</span>
-                          <div>
-                            <p className="text-xs font-bold text-emerald-800">Con {oreDipendente} ore il datore copre l'INPS</p>
-                            <p className="text-xs text-emerald-600 mt-0.5 leading-relaxed">
-                              Sei già coperto a pieno dalla contribuzione del lavoro dipendente — sulla P.IVA non hai un'ulteriore quota INPS da accantonare.
-                            </p>
-                          </div>
-                        </div>
-                      ) : oreDipendente > 0 && !casoSpeciale ? (
+                      {/* Messaggio contestuale */}
+                      {oreDipendente > 0 && !casoSpeciale ? (
                         <p className="text-xs text-gray-400 mt-1.5">
                           Riduzione 50% garantita dalla legge (art. 2 c.57 L. 92/2012) — 26.23% → <strong>13.12%</strong>
                         </p>
                       ) : (
                         <p className="text-xs text-gray-400 mt-1">
-                          Qualsiasi numero di ore conta — sei già coperto dall'INPS del datore
+                          Qualsiasi numero di ore conta — il contratto dipendente dà diritto alla riduzione
                         </p>
                       )}
                     </div>
