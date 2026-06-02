@@ -41,7 +41,9 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
   const [vatThreshold, setVatThreshold] = useState(existingProfile?.vat_threshold ?? 85000)
   const [atecoCoefficient, setAtecoCoefficient] = useState(existingProfile?.ateco_coefficient ?? 0.78)
   const [inpsRegime, setInpsRegime] = useState<InpsRegime>(existingProfile?.inps_regime ?? 'GESTIONE_SEPARATA')
-  const [inpsRiduzioneDipendente, setInpsRiduzioneDipendente] = useState((existingProfile?.inps_reduction_pct ?? 0) === 50)
+
+  // Ore settimanali da dipendente (solo profilo BOTH)
+  const [oreDipendente, setOreDipendente] = useState(existingProfile?.stipendio_annuo_lordo ? 25 : 0)
 
   // Caso speciale: aliquota personalizzata (pensionato, cassa professionale, ecc.)
   const INPS_BASE: Record<InpsRegime, number> = { GESTIONE_SEPARATA: 26.23, IVS_ARTIGIANI: 24.00, IVS_COMMERCIANTI: 24.48 }
@@ -53,6 +55,9 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
       ? String(+(INPS_BASE[existingProfile?.inps_regime ?? 'GESTIONE_SEPARATA'] * (1 - existingReduction / 100)).toFixed(2))
       : ''
   )
+
+  // Per BOTH: il dipendente copre già l'INPS → riduzione automatica 50%
+  const inpsRiduzioneDipendente = profileType === 'BOTH' && oreDipendente > 0 && !casoSpeciale
   const [stipendioAnnuoLordo, setStipendioAnnuoLordo] = useState(existingProfile?.stipendio_annuo_lordo ?? 0)
   const [name, setName] = useState(existingProfile?.name ?? '')
   const [currency, setCurrency] = useState(existingProfile?.currency ?? 'EUR')
@@ -232,41 +237,60 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
               {/* INPS regime */}
               <div className="mb-5">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Regime INPS</p>
-                <InpsRegimeSelector value={inpsRegime} onChange={(v) => { setInpsRegime(v); if (v !== 'GESTIONE_SEPARATA') setInpsRiduzioneDipendente(false) }} />
 
-                {/* Riduzione 50% per dipendenti già coperti da INPS — solo BOTH + Gestione Separata */}
-                {profileType === 'BOTH' && inpsRegime === 'GESTIONE_SEPARATA' && (
-                  <button
-                    type="button"
-                    onClick={() => setInpsRiduzioneDipendente((v) => !v)}
-                    className={`mt-3 w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${
-                      inpsRiduzioneDipendente
-                        ? 'border-violet-400 bg-violet-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                      inpsRiduzioneDipendente ? 'bg-violet-500 border-violet-500' : 'border-gray-300'
-                    }`}>
-                      {inpsRiduzioneDipendente && <span className="text-white text-xs font-bold">✓</span>}
+                {/* ── Caso BOTH: flow guidato ── */}
+                {profileType === 'BOTH' ? (
+                  <div className="space-y-3">
+                    {/* Banner contestuale */}
+                    <div className="bg-violet-50 border border-violet-200 rounded-xl p-3.5 flex gap-3">
+                      <span className="text-lg shrink-0">💼</span>
+                      <div>
+                        <p className="text-sm font-semibold text-violet-800">Hai scelto "Entrambi"</p>
+                        <p className="text-xs text-violet-600 mt-0.5 leading-relaxed">
+                          Hai già un contratto da dipendente — il tuo datore di lavoro versa l'INPS per te.
+                          Questo ti dà diritto alla <strong>riduzione 50%</strong> sull'INPS della P.IVA (Gestione Separata: 26.23% → 13.12%).
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Ore settimanali */}
                     <div>
-                      <p className={`text-sm font-semibold ${inpsRiduzioneDipendente ? 'text-violet-700' : 'text-gray-800'}`}>
-                        Il mio datore di lavoro paga già l'INPS
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                        Ho un contratto da dipendente (qualsiasi ore) → sono già iscritto all'INPS → ho diritto alla <strong>riduzione 50%</strong> sulla Gestione Separata
-                      </p>
-                      {inpsRiduzioneDipendente && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium">
-                            26.23% → 13.12%
-                          </span>
-                          <span className="text-xs text-violet-500">applicato al calcolo INPS P.IVA</span>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Quante ore lavori come dipendente a settimana?
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                          <input
+                            type="number"
+                            min="1"
+                            max="40"
+                            value={oreDipendente || ''}
+                            onChange={(e) => setOreDipendente(+e.target.value)}
+                            placeholder="Es. 25"
+                            className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">ore/sett</span>
                         </div>
-                      )}
+                        {oreDipendente > 0 && !casoSpeciale && (
+                          <div className="flex items-center gap-1.5 px-3 py-2 bg-violet-100 rounded-xl">
+                            <span className="text-xs font-bold text-violet-700">13.12%</span>
+                            <span className="text-xs text-violet-500">applicato ✓</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Qualsiasi numero di ore → riduzione 50% garantita dalla legge (art. 2 c.57 L. 92/2012)
+                      </p>
                     </div>
-                  </button>
+
+                    {/* Regime INPS P.IVA — sempre Gestione Separata per BOTH, nascosto */}
+                    <p className="text-xs text-gray-400">
+                      Regime INPS P.IVA: <strong className="text-gray-600">Gestione Separata</strong> (standard per professionisti)
+                    </p>
+                  </div>
+                ) : (
+                  /* ── Caso FREELANCE puro: selettore standard ── */
+                  <InpsRegimeSelector value={inpsRegime} onChange={setInpsRegime} />
                 )}
                 {/* Caso speciale: aliquota personalizzata */}
                 <div className="mt-2">
