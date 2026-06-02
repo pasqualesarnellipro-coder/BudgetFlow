@@ -436,7 +436,7 @@ export function InvoiceImportModal({ onClose }: Props) {
     const toInsert = invoices
       .filter((_, i) => selected.has(i))
       .map((inv) => {
-        const netto = calcNetto(inv.amount_gross, profile.tax_regime, profile.ateco_coefficient)
+        const netto = calcNetto(inv.amount_gross, profile.tax_regime, profile.ateco_coefficient, profile.inps_regime ?? 'GESTIONE_SEPARATA', profile.inps_reduction_pct ?? 0)
         return {
           user_id:       profile.id,
           date_issued:   inv.date_issued || new Date().toISOString().slice(0,10),
@@ -708,7 +708,7 @@ export function InvoiceImportModal({ onClose }: Props) {
                   const isSelected = selected.has(i)
                   const isEditing = editIdx === i
                   const conf = confidenceBadge(inv.confidence)
-                  const netto = profile ? calcNetto(inv.amount_gross, profile.tax_regime, profile.ateco_coefficient) : null
+                  const netto = profile ? calcNetto(inv.amount_gross, profile.tax_regime, profile.ateco_coefficient, profile.inps_regime ?? 'GESTIONE_SEPARATA', profile.inps_reduction_pct ?? 0) : null
 
                   return (
                     <div

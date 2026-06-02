@@ -89,7 +89,7 @@ export function FreelanceHub() {
     ? `Al ritmo attuale: ${MONTH_NAMES_FULL[Math.min(Math.floor(monthsToThreshold) - 1, 11)]} ${selectedYear}`
     : 'Nessuna proiezione disponibile'
 
-  const netto = grossInput ? calcNetto(parseFloat(grossInput), profile.tax_regime, profile.ateco_coefficient) : null
+  const netto = grossInput ? calcNetto(parseFloat(grossInput), profile.tax_regime, profile.ateco_coefficient, profile.inps_regime ?? 'GESTIONE_SEPARATA', profile.inps_reduction_pct ?? 0) : null
 
   // ─── Pianificazione Fiscale ────────────────────────────────────────────────
   const fiscaleInput: FiscaleInput = useMemo(() => ({
@@ -130,7 +130,7 @@ export function FreelanceHub() {
   const handleAddInvoice = async () => {
     if (!profile || !invoiceForm.amount_gross) return
     const gross = parseFloat(invoiceForm.amount_gross)
-    const result = calcNetto(gross, profile.tax_regime, profile.ateco_coefficient)
+    const result = calcNetto(gross, profile.tax_regime, profile.ateco_coefficient, profile.inps_regime ?? 'GESTIONE_SEPARATA', profile.inps_reduction_pct ?? 0)
     await supabase.from('invoices').insert({
       user_id: profile.id,
       ...invoiceForm,

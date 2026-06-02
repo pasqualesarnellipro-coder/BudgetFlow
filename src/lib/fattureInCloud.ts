@@ -142,10 +142,12 @@ export function ficInvoiceToBudgetFlow(
   inv: FICInvoice,
   userId: string,
   taxRegime: TaxRegime,
-  atecoCoefficient: number
+  atecoCoefficient: number,
+  inpsRegime: import('./fiscalePlanning').InpsRegime = 'GESTIONE_SEPARATA',
+  inpsReductionPct = 0,
 ) {
   const gross = inv.gross_amount ?? 0
-  const netto = calcNetto(gross, taxRegime, atecoCoefficient)
+  const netto = calcNetto(gross, taxRegime, atecoCoefficient, inpsRegime, inpsReductionPct)
 
   return {
     user_id: userId,

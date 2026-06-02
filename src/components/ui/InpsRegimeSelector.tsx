@@ -126,9 +126,11 @@ export function InpsRegimeSelector({ value, onChange }: Props) {
         )
       })}
 
-      {/* Legenda */}
+      {/* Disclaimer */}
       <p className="text-xs text-gray-400 px-1 pt-1">
-        Non sei sicuro? Consulta il sito INPS o il tuo commercialista. Puoi sempre modificare questa impostazione in seguito.
+        Le aliquote indicate sono quelle standard 2025 (INPS Circ. 35/2025).
+        Casi particolari (dipendente, pensionato, cassa professionale) possono variare.
+        I calcoli dell'app sono <strong>indicativi</strong> — consulta il tuo commercialista.
       </p>
     </div>
   )

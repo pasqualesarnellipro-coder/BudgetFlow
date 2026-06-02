@@ -42,22 +42,23 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
   const [atecoCoefficient, setAtecoCoefficient] = useState(existingProfile?.ateco_coefficient ?? 0.78)
   const [inpsRegime, setInpsRegime] = useState<InpsRegime>(existingProfile?.inps_regime ?? 'GESTIONE_SEPARATA')
 
-  // Ore settimanali da dipendente (solo profilo BOTH)
-  const [oreDipendente, setOreDipendente] = useState(existingProfile?.stipendio_annuo_lordo ? 25 : 0)
+  // Dipendente + P.IVA: aliquota GS agevolata al 24% (INPS Circ. 35/2025)
+  // Corrisponde a inps_reduction_pct ≈ 8.5 (= 1 - 24/26.23)
+  const INPS_DIPENDENTE_REDUCTION = Math.round((1 - 24 / 26.23) * 100 * 10) / 10  // ~8.5
+  const existingReduction = existingProfile?.inps_reduction_pct ?? 0
+  const [haDipendente, setHaDipendente] = useState(
+    existingProfile?.profile_type === 'BOTH' && existingReduction > 0 && existingReduction <= 10
+  )
 
   // Caso speciale: aliquota personalizzata (pensionato, cassa professionale, ecc.)
   const INPS_BASE: Record<InpsRegime, number> = { GESTIONE_SEPARATA: 26.23, IVS_ARTIGIANI: 24.00, IVS_COMMERCIANTI: 24.48 }
-  const existingReduction = existingProfile?.inps_reduction_pct ?? 0
-  const isCustom = existingReduction !== 0 && existingReduction !== 50
+  const isCustom = existingReduction > 10  // >10% riduzione = custom (non standard dipendente)
   const [casoSpeciale, setCasoSpeciale] = useState(isCustom)
   const [customInpsAliquota, setCustomInpsAliquota] = useState(
     isCustom
       ? String(+(INPS_BASE[existingProfile?.inps_regime ?? 'GESTIONE_SEPARATA'] * (1 - existingReduction / 100)).toFixed(2))
       : ''
   )
-
-  // Per BOTH: il dipendente copre già l'INPS → riduzione automatica 50%
-  const inpsRiduzioneDipendente = profileType === 'BOTH' && oreDipendente > 0 && !casoSpeciale
   const [stipendioAnnuoLordo, setStipendioAnnuoLordo] = useState(existingProfile?.stipendio_annuo_lordo ?? 0)
   const [name, setName] = useState(existingProfile?.name ?? '')
   const [currency, setCurrency] = useState(existingProfile?.currency ?? 'EUR')
@@ -81,12 +82,14 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
         if (casoSpeciale && customInpsAliquota !== '') {
           const base = INPS_BASE[inpsRegime]
           const custom = parseFloat(customInpsAliquota)
-          if (!isNaN(custom) && custom >= 0 && custom < base) {
-            return Math.round((1 - custom / base) * 100)
-          }
           if (!isNaN(custom) && custom === 0) return 100
+          if (!isNaN(custom) && custom > 0 && custom < base) {
+            return Math.round((1 - custom / base) * 100 * 10) / 10
+          }
         }
-        if (inpsRiduzioneDipendente) return 50
+        // Dipendente + P.IVA: aliquota GS agevolata 24% (non 26.23%)
+        // Fonte: INPS Circ. 35/2025, art. 2 c.26 L. 335/95
+        if (profileType === 'BOTH' && haDipendente && !casoSpeciale) return INPS_DIPENDENTE_REDUCTION
         return 0
       })(),
       stipendio_annuo_lordo: profileType === 'BOTH' ? stipendioAnnuoLordo : 0,
@@ -249,68 +252,56 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
                 {/* ── Caso BOTH: flow guidato ── */}
                 {profileType === 'BOTH' ? (
                   <div className="space-y-3">
-                    {/* Banner contestuale */}
+                    {/* Info contestuale */}
                     <div className="bg-violet-50 border border-violet-200 rounded-xl p-3.5 flex gap-3">
                       <span className="text-lg shrink-0">💼</span>
                       <div>
-                        <p className="text-sm font-semibold text-violet-800">Hai scelto "Entrambi"</p>
+                        <p className="text-sm font-semibold text-violet-800">Profilo: dipendente + P.IVA</p>
                         <p className="text-xs text-violet-600 mt-0.5 leading-relaxed">
-                          Hai già un contratto da dipendente — il tuo datore di lavoro versa l'INPS per te.
-                          Questo ti dà diritto alla <strong>riduzione 50%</strong> sull'INPS della P.IVA (Gestione Separata: 26.23% → 13.12%).
+                          Se sei iscritto all'INPS come lavoratore dipendente, per la Gestione Separata P.IVA
+                          si applica l'aliquota agevolata del <strong>24%</strong> invece del 26.23%
+                          (art. 2 c.26 L. 335/95 — INPS Circ. 35/2025).
                         </p>
                       </div>
                     </div>
 
-                    {/* Ore settimanali */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quante ore lavori come dipendente a settimana?
-                      </label>
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1">
-                          <input
-                            type="number"
-                            min="1"
-                            max="40"
-                            value={oreDipendente || ''}
-                            onChange={(e) => setOreDipendente(+e.target.value)}
-                            placeholder="Es. 25"
-                            className={`w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition-colors ${
-                              oreDipendente >= 25
-                                ? 'border-emerald-400 focus:ring-emerald-300 bg-emerald-50'
-                                : oreDipendente > 0
-                                ? 'border-violet-300 focus:ring-violet-400'
-                                : 'border-gray-300 focus:ring-violet-400'
-                            }`}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">ore/sett</span>
-                        </div>
-                        {oreDipendente > 0 && !casoSpeciale && (
-                          <div className="flex items-center gap-1.5 px-3 py-2 bg-violet-100 rounded-xl">
-                            <span className="text-xs font-bold text-violet-700">13.12%</span>
-                            <span className="text-xs text-violet-500">applicato ✓</span>
+                    {/* Checkbox: hai contratto dipendente attivo? */}
+                    <button
+                      type="button"
+                      onClick={() => setHaDipendente((v) => !v)}
+                      className={`w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${
+                        haDipendente
+                          ? 'border-violet-400 bg-violet-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
+                        haDipendente ? 'bg-violet-500 border-violet-500' : 'border-gray-300'
+                      }`}>
+                        {haDipendente && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <div>
+                        <p className={`text-sm font-semibold ${haDipendente ? 'text-violet-700' : 'text-gray-800'}`}>
+                          Sono iscritto all'INPS come dipendente
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Ho un contratto di lavoro subordinato attivo (matricola INPS del datore)
+                        </p>
+                        {haDipendente && !casoSpeciale && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium">
+                              26.23% → 24%
+                            </span>
+                            <span className="text-xs text-gray-400">usato nei calcoli indicativi</span>
                           </div>
                         )}
                       </div>
+                    </button>
 
-                      {/* Messaggio contestuale */}
-                      {oreDipendente > 0 && !casoSpeciale ? (
-                        <p className="text-xs text-gray-400 mt-1.5">
-                          Riduzione 50% garantita dalla legge (art. 2 c.57 L. 92/2012) — 26.23% → <strong>13.12%</strong>
-                        </p>
-                      ) : (
-                        <p className="text-xs text-gray-400 mt-1">
-                          Qualsiasi numero di ore conta — il contratto dipendente dà diritto alla riduzione
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Regime INPS P.IVA — sempre Gestione Separata per BOTH */}
-                    {oreDipendente < 25 && (
-                      <p className="text-xs text-gray-400">
-                        Regime INPS P.IVA: <strong className="text-gray-600">Gestione Separata</strong> (standard per professionisti)
-                      </p>
-                    )}
+                    <p className="text-xs text-gray-400 px-1">
+                      Regime INPS P.IVA: <strong className="text-gray-600">Gestione Separata</strong>.
+                      Verifica la tua situazione specifica con il tuo commercialista.
+                    </p>
                   </div>
                 ) : (
                   /* ── Caso FREELANCE puro: selettore standard ── */
@@ -330,11 +321,11 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
                     <div className="mt-2.5 bg-orange-50 border border-orange-200 rounded-xl p-4">
                       <p className="text-xs font-bold text-orange-800 mb-2">Aliquota INPS personalizzata</p>
                       <p className="text-xs text-orange-600 mb-3 leading-relaxed">
-                        Inserisci la tua aliquota effettiva. Esempi:
+                        Inserisci la tua aliquota effettiva. Esempi orientativi (verifica con il tuo commercialista):
                         <span className="block mt-1 space-y-0.5">
-                          <span className="block">· <strong>0%</strong> — Cassa professionale (ENPAM, Cassa Forense, INARCASSA…)</span>
-                          <span className="block">· <strong>13.12%</strong> — Dipendente già coperto (= riduzione 50%)</span>
-                          <span className="block">· <strong>24%</strong> — Pensionato in Gestione Separata</span>
+                          <span className="block">· <strong>0%</strong> — Cassa professionale propria (ENPAM, Cassa Forense, INARCASSA…)</span>
+                          <span className="block">· <strong>24%</strong> — Dipendente già iscritto INPS / Pensionato (INPS Circ. 35/2025)</span>
+                          <span className="block">· <strong>26.23%</strong> — Aliquota standard 2025, nessuna altra copertura</span>
                         </span>
                       </p>
                       <div className="flex items-center gap-3">

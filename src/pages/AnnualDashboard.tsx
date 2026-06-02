@@ -99,7 +99,7 @@ export function AnnualDashboard() {
   // Nettometro YTD
   const fatturatoYTD = invoices.reduce((s: number, i: { amount_gross: number }) => s + i.amount_gross, 0)
   const nettoCalc = profile && fatturatoYTD > 0
-    ? calcNetto(fatturatoYTD, profile.tax_regime, profile.ateco_coefficient)
+    ? calcNetto(fatturatoYTD, profile.tax_regime, profile.ateco_coefficient, profile.inps_regime ?? 'GESTIONE_SEPARATA', profile.inps_reduction_pct ?? 0)
     : null
   const sogliaPercent = profile ? (fatturatoYTD / profile.vat_threshold) * 100 : 0
   const sogliaColor = sogliaPercent < 60 ? '#10b981' : sogliaPercent < 85 ? '#f59e0b' : '#f43f5e'
