@@ -233,7 +233,7 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
                         Il mio datore di lavoro paga già l'INPS
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                        Lavoro dipendente con contratto ≥ 18 ore/sett → ho diritto alla <strong>riduzione 50%</strong> sulla Gestione Separata
+                        Ho un contratto da dipendente (qualsiasi ore) → sono già iscritto all'INPS → ho diritto alla <strong>riduzione 50%</strong> sulla Gestione Separata
                       </p>
                       {inpsRiduzioneDipendente && (
                         <div className="mt-2 flex items-center gap-2">
