@@ -113,9 +113,15 @@ function parseInvoiceAmount(raw: string): number {
   return neg ? -n : n
 }
 
-function normalizeDate(raw: string): string {
+function normalizeDate(raw: unknown): string {
   if (!raw) return ''
-  const s = raw.trim()
+  // SheetJS con cellDates:true restituisce oggetti Date
+  if (raw instanceof Date) {
+    if (!isNaN(raw.getTime())) return raw.toISOString().slice(0, 10)
+    return ''
+  }
+  const s = String(raw).trim()
+  if (!s) return ''
   // YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
   // DD/MM/YYYY o DD-MM-YYYY
@@ -500,7 +506,10 @@ export function InvoiceImportModal({ onClose }: Props) {
       await supabase.from('invoices').insert(toInsert.slice(i, i + CHUNK))
     }
 
-    qc.invalidateQueries({ queryKey: ['invoices'] })
+    // Invalida E ri-fetcha immediatamente — invalidateQueries da solo
+    // non forza il refetch se staleTime non è scaduto
+    await qc.invalidateQueries({ queryKey: ['invoices'] })
+    await qc.refetchQueries({ queryKey: ['invoices'] })
     setImportedCount(toInsert.length)
     setLoading(false)
     setLoadingMsg('')
