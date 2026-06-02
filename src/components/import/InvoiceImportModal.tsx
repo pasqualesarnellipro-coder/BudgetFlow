@@ -508,7 +508,6 @@ export function InvoiceImportModal({ onClose }: Props) {
           status:        inv.status,
           due_date:      inv.due_date || inv.date_issued || new Date().toISOString().slice(0,10),
           activity_name: inv.activity_name || null,
-          fic_id:        null,
         }
       })
 
