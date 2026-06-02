@@ -212,153 +212,194 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
             </div>
           )}
 
-          {/* STEP 2 — Regime fiscale (solo freelance) */}
+          {/* STEP 2 — Fisco */}
           {step === 2 && isFreelance && (
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 mb-1">Regime fiscale</h2>
-              <p className="text-gray-500 text-sm mb-5">
-                Questi dati vengono usati dal <strong>Nettometro</strong> per calcolare automaticamente tasse e INPS su ogni fattura che emetti.
-              </p>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 mb-0.5">Come fatturi?</h2>
+                <p className="text-gray-400 text-sm">Scegli il tuo regime fiscale — il Nettometro calcolerà tasse e accantonamenti automaticamente.</p>
+              </div>
 
-              <div className="space-y-3 mb-5">
+              {/* ── 1. REGIME FISCALE ─────────────────────────────── */}
+              <div className="grid grid-cols-3 gap-2">
                 {REGIME_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => setTaxRegime(opt.value)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
+                    className={`flex flex-col items-center gap-1.5 p-3.5 rounded-2xl border-2 transition-all text-center ${
                       taxRegime === opt.value
                         ? 'border-indigo-500 bg-indigo-50 shadow-sm'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        : 'border-gray-200 hover:border-indigo-200 hover:bg-gray-50'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${
-                      taxRegime === opt.value ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600'
-                    }`}>
+                    <span className={`text-2xl font-black ${taxRegime === opt.value ? 'text-indigo-600' : 'text-gray-400'}`}>
                       {opt.rate}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{opt.label}</p>
-                      <p className="text-sm text-gray-500">{opt.desc}</p>
-                    </div>
-                    {taxRegime === opt.value && <span className="text-indigo-500 text-lg">✓</span>}
+                    </span>
+                    <p className={`text-xs font-semibold leading-tight ${taxRegime === opt.value ? 'text-indigo-700' : 'text-gray-600'}`}>
+                      {opt.label}
+                    </p>
+                    <p className="text-[10px] text-gray-400 leading-tight">{opt.desc}</p>
                   </button>
                 ))}
               </div>
 
-              {/* INPS regime */}
-              <div className="mb-5">
-                <p className="text-sm font-semibold text-gray-700 mb-3">Regime INPS</p>
+              {/* ── 2. SITUAZIONE INPS ───────────────────────────── */}
+              <div>
+                <p className="text-sm font-semibold text-gray-800 mb-2">Qual è la tua situazione previdenziale?</p>
+                <p className="text-xs text-gray-400 mb-3">Scegli quella che ti descrive meglio — influenza il calcolo INPS sulla P.IVA.</p>
 
-                {/* ── Caso BOTH: flow guidato ── */}
                 {profileType === 'BOTH' ? (
-                  <div className="space-y-3">
-                    {/* Info contestuale */}
-                    <div className="bg-violet-50 border border-violet-200 rounded-xl p-3.5 flex gap-3">
-                      <span className="text-lg shrink-0">💼</span>
-                      <div>
-                        <p className="text-sm font-semibold text-violet-800">Profilo: dipendente + P.IVA</p>
-                        <p className="text-xs text-violet-600 mt-0.5 leading-relaxed">
-                          Se sei iscritto all'INPS come lavoratore dipendente, per la Gestione Separata P.IVA
-                          si applica l'aliquota agevolata del <strong>24%</strong> invece del 26.23%
-                          (art. 2 c.26 L. 335/95 — INPS Circ. 35/2025).
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Checkbox: hai contratto dipendente attivo? */}
-                    <button
-                      type="button"
-                      onClick={() => setHaDipendente((v) => !v)}
-                      className={`w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${
-                        haDipendente
-                          ? 'border-violet-400 bg-violet-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                        haDipendente ? 'bg-violet-500 border-violet-500' : 'border-gray-300'
-                      }`}>
-                        {haDipendente && <span className="text-white text-xs font-bold">✓</span>}
-                      </div>
-                      <div>
-                        <p className={`text-sm font-semibold ${haDipendente ? 'text-violet-700' : 'text-gray-800'}`}>
-                          Sono iscritto all'INPS come dipendente
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Ho un contratto di lavoro subordinato attivo (matricola INPS del datore)
-                        </p>
-                        {haDipendente && !casoSpeciale && (
-                          <div className="mt-1.5 flex items-center gap-2">
-                            <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium">
-                              26.23% → 24%
-                            </span>
-                            <span className="text-xs text-gray-400">usato nei calcoli indicativi</span>
-                          </div>
-                        )}
-                      </div>
-                    </button>
-
-                    <p className="text-xs text-gray-400 px-1">
-                      Regime INPS P.IVA: <strong className="text-gray-600">Gestione Separata</strong>.
-                      Verifica la tua situazione specifica con il tuo commercialista.
-                    </p>
+                  /* BOTH: 3 scelte chiare */
+                  <div className="space-y-2">
+                    {[
+                      {
+                        id: 'dipendente',
+                        icon: '💼',
+                        title: 'Ho la busta paga',
+                        sub: 'Sono dipendente — il mio datore versa l\'INPS',
+                        badge: '24% INPS P.IVA',
+                        badgeColor: 'bg-violet-100 text-violet-700',
+                        active: haDipendente && !casoSpeciale,
+                        onSelect: () => { setHaDipendente(true); setCasoSpeciale(false) },
+                      },
+                      {
+                        id: 'speciale',
+                        icon: '🏛️',
+                        title: 'Caso speciale',
+                        sub: 'Cassa professionale, pensionato o aliquota diversa',
+                        badge: 'personalizzato',
+                        badgeColor: 'bg-orange-100 text-orange-700',
+                        active: casoSpeciale,
+                        onSelect: () => { setCasoSpeciale(true); setHaDipendente(false) },
+                      },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={opt.onSelect}
+                        className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border-2 text-left transition-all ${
+                          opt.active
+                            ? 'border-indigo-400 bg-indigo-50 shadow-sm'
+                            : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="text-2xl shrink-0">{opt.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold ${opt.active ? 'text-indigo-700' : 'text-gray-800'}`}>{opt.title}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{opt.sub}</p>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${opt.badgeColor}`}>
+                          {opt.badge}
+                        </span>
+                        {opt.active && <span className="text-indigo-500 font-bold shrink-0">✓</span>}
+                      </button>
+                    ))}
                   </div>
                 ) : (
-                  /* ── Caso FREELANCE puro: selettore standard ── */
+                  /* FREELANCE puro: selettore INPS standard */
                   <InpsRegimeSelector value={inpsRegime} onChange={setInpsRegime} />
                 )}
-                {/* Caso speciale: aliquota personalizzata */}
-                <div className="mt-2">
-                  <button
-                    type="button"
-                    onClick={() => { setCasoSpeciale((v) => !v); setCustomInpsAliquota('') }}
-                    className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
-                  >
-                    {casoSpeciale ? '✕ Annulla caso speciale' : 'Caso speciale? (pensionato, cassa professionale, esente…)'}
-                  </button>
 
-                  {casoSpeciale && (
-                    <div className="mt-2.5 bg-orange-50 border border-orange-200 rounded-xl p-4">
-                      <p className="text-xs font-bold text-orange-800 mb-2">Aliquota INPS personalizzata</p>
-                      <p className="text-xs text-orange-600 mb-3 leading-relaxed">
-                        Inserisci la tua aliquota effettiva. Esempi orientativi (verifica con il tuo commercialista):
-                        <span className="block mt-1 space-y-0.5">
-                          <span className="block">· <strong>0%</strong> — Cassa professionale propria (ENPAM, Cassa Forense, INARCASSA…)</span>
-                          <span className="block">· <strong>24%</strong> — Dipendente già iscritto INPS / Pensionato (INPS Circ. 35/2025)</span>
-                          <span className="block">· <strong>26.23%</strong> — Aliquota standard 2025, nessuna altra copertura</span>
-                        </span>
-                      </p>
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-1">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            max={INPS_BASE[inpsRegime]}
-                            value={customInpsAliquota}
-                            onChange={(e) => setCustomInpsAliquota(e.target.value)}
-                            placeholder={`Es. 0 — max ${INPS_BASE[inpsRegime]}%`}
-                            className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
-                        </div>
-                        {customInpsAliquota !== '' && !isNaN(parseFloat(customInpsAliquota)) && (
-                          <div className="text-xs text-orange-700 font-medium whitespace-nowrap">
-                            {INPS_BASE[inpsRegime]}% → <strong>{parseFloat(customInpsAliquota).toFixed(2)}%</strong>
-                          </div>
-                        )}
+                {/* Input aliquota custom — solo se caso speciale */}
+                {casoSpeciale && (
+                  <div className="mt-3 bg-orange-50 border border-orange-200 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-orange-800 mb-3">Qual è la tua aliquota INPS effettiva?</p>
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {[
+                        { label: '0%', sub: 'Cassa professionale', val: '0' },
+                        { label: '24%', sub: 'Pensionato', val: '24' },
+                        { label: '26.23%', sub: 'Standard', val: '26.23' },
+                      ].map((p) => (
+                        <button
+                          key={p.val}
+                          type="button"
+                          onClick={() => setCustomInpsAliquota(p.val)}
+                          className={`p-2.5 rounded-xl border-2 text-center transition-all ${
+                            customInpsAliquota === p.val
+                              ? 'border-orange-400 bg-orange-100'
+                              : 'border-orange-200 hover:border-orange-300 bg-white'
+                          }`}
+                        >
+                          <p className="text-sm font-bold text-orange-800">{p.label}</p>
+                          <p className="text-[10px] text-orange-500 mt-0.5">{p.sub}</p>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">Altro:</span>
+                      <div className="relative flex-1">
+                        <input
+                          type="number" step="0.01" min="0" max="100"
+                          value={customInpsAliquota}
+                          onChange={(e) => setCustomInpsAliquota(e.target.value)}
+                          placeholder="inserisci %"
+                          className="w-full border border-orange-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 pr-7"
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">%</span>
                       </div>
                     </div>
-                  )}
+                    <p className="text-[10px] text-orange-400 mt-2">Verifica con il tuo commercialista.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* ── 3. CODICE ATECO ──────────────────────────────── */}
+              <div>
+                <p className="text-sm font-semibold text-gray-800 mb-1">Qual è il tuo codice ATECO?</p>
+                <p className="text-xs text-gray-400 mb-3">Determina la % di imponibile fiscale sul tuo fatturato. Cerca la tua attività qui sotto.</p>
+                <AtecoLookup
+                  currentCoefficient={atecoCoefficient}
+                  onSelect={(coeff) => setAtecoCoefficient(coeff)}
+                />
+                {/* Conferma visiva */}
+                <div className="mt-3 flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2.5">
+                  <span className="text-xs text-indigo-600">Coefficiente selezionato</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-black text-indigo-700">{Math.round(atecoCoefficient * 100)}%</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const v = prompt('Inserisci il coefficiente ATECO (es. 0.78 per 78%):')
+                        if (v && !isNaN(parseFloat(v))) setAtecoCoefficient(parseFloat(v))
+                      }}
+                      className="text-xs text-indigo-400 hover:text-indigo-600 underline"
+                    >
+                      modifica
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-3">
-                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Parametri avanzati</p>
+              {/* ── 4. RAL DIPENDENTE (solo BOTH) ────────────────── */}
+              {profileType === 'BOTH' && (
                 <div>
+                  <p className="text-sm font-semibold text-gray-800 mb-1">Quanto guadagni come dipendente?</p>
+                  <p className="text-xs text-gray-400 mb-3">
+                    Inserisci la tua RAL (Retribuzione Annua Lorda) — la trovi nella busta paga o nel contratto.
+                    <span className="text-indigo-500"> Puoi saltare e inserirla dopo.</span>
+                  </p>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">€</span>
+                    <input
+                      type="number"
+                      value={stipendioAnnuoLordo || ''}
+                      onChange={(e) => setStipendioAnnuoLordo(+e.target.value)}
+                      placeholder="Es. 17.000 — lascia vuoto se non lo sai"
+                      className="w-full border border-gray-300 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── IMPOSTAZIONI AVANZATE (collassabili) ─────────── */}
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer text-xs text-gray-400 hover:text-gray-600 list-none select-none">
+                  <span className="w-4 h-4 rounded-full border border-gray-300 flex items-center justify-center text-[10px] group-open:rotate-90 transition-transform">▶</span>
+                  Impostazioni avanzate (soglia forfettaria)
+                </summary>
+                <div className="mt-3 bg-gray-50 rounded-xl p-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Soglia forfettaria annua (€)
-                    <span className="ml-1 text-gray-400 text-xs">(default: 85.000€)</span>
                   </label>
                   <input
                     type="number"
@@ -366,90 +407,9 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
                     onChange={(e) => setVatThreshold(+e.target.value)}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   />
-                  <p className="text-xs text-gray-400 mt-1">Importo massimo di fatturato annuo nel regime forfettario</p>
+                  <p className="text-xs text-gray-400 mt-1">Default 85.000€ — modifica solo se conosci la tua soglia specifica.</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Coefficiente ATECO
-                  </label>
-                  {/* Lookup guidato */}
-                  <div className="mb-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                    <p className="text-xs text-indigo-700 font-medium mb-2">
-                      Selezionato: <strong>{Math.round(atecoCoefficient * 100)}%</strong>
-                      {' '}— non sai qual è il tuo? Cercalo qui sotto 👇
-                    </p>
-                    <AtecoLookup
-                      currentCoefficient={atecoCoefficient}
-                      onSelect={(coeff) => setAtecoCoefficient(coeff)}
-                    />
-                  </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="1"
-                    value={atecoCoefficient}
-                    onChange={(e) => setAtecoCoefficient(+e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">Oppure inseriscilo manualmente se lo conosci già (es. 0,78)</p>
-                </div>
-              </div>
-
-              {/* Stipendio dipendente — solo per BOTH */}
-              {profileType === 'BOTH' && (
-                <div className="mb-4">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Stipendio da lavoro dipendente</p>
-
-                  {/* Input RAL */}
-                  <div className="relative mb-3">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">€</span>
-                    <input
-                      type="number"
-                      value={stipendioAnnuoLordo || ''}
-                      onChange={(e) => setStipendioAnnuoLordo(+e.target.value)}
-                      placeholder="Es. 24.000"
-                      className="w-full border border-gray-300 rounded-xl pl-8 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-                    />
-                  </div>
-
-                  {/* Dove lo trovo */}
-                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3.5 space-y-2.5">
-                    <p className="text-xs font-bold text-amber-800 uppercase tracking-wide">Dove trovo la RAL?</p>
-                    <div className="space-y-2">
-                      {[
-                        {
-                          label: 'Busta paga',
-                          detail: 'Guarda la voce "Retribuzione annua lorda" o "RAL" — di solito in alto o nel riepilogo annuale.',
-                        },
-                        {
-                          label: 'Contratto di lavoro',
-                          detail: 'È scritta nell\'offerta/contratto che hai firmato. Cerca "retribuzione lorda annua" o "RAL".',
-                        },
-                        {
-                          label: 'CU (Certificazione Unica)',
-                          detail: 'Il documento fiscale che ricevi ogni marzo dal tuo datore di lavoro. Casella 1 = reddito lavoro dipendente.',
-                        },
-                        {
-                          label: 'Dichiarazione dei redditi',
-                          detail: 'Nel 730 o Modello Redditi, quadro RC, trovi il totale dei redditi da lavoro dipendente.',
-                        },
-                      ].map(({ label, detail }) => (
-                        <div key={label} className="flex gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
-                          <div>
-                            <p className="text-xs font-semibold text-amber-800">{label}</p>
-                            <p className="text-xs text-amber-600 leading-relaxed">{detail}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-xs text-amber-500 pt-1 border-t border-amber-100">
-                      Non sei sicuro? Puoi inserire una stima e aggiornarlo in seguito dalle Impostazioni.
-                    </p>
-                  </div>
-                </div>
-              )}
+              </details>
 
               <div className="flex gap-3">
                 <button onClick={goBack} className="flex-1 border border-gray-300 text-gray-700 font-medium py-3 rounded-xl hover:bg-gray-50">
