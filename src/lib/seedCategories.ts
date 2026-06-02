@@ -16,6 +16,9 @@ const INCOME_CATEGORIES: SeedCategory[] = [
   { name: 'Interessi & Dividendi',  icon: '📈', type: 'INCOME' },
   { name: 'Bonus & Premi',          icon: '🏆', type: 'INCOME' },
   { name: 'Altro reddito',          icon: '➕', type: 'INCOME' },
+  { name: 'WIT',                    icon: '🎯', type: 'INCOME' },
+  { name: 'Prodotti Digitali',      icon: '💻', type: 'INCOME' },
+  { name: 'Regali ricevuti',        icon: '🎁', type: 'INCOME' },
 ]
 
 // ─── SPESE PERSONALI ─────────────────────────────────────────────────────────
@@ -37,6 +40,11 @@ const EXPENSES_CATEGORIES: SeedCategory[] = [
   { name: 'Tasse & Imposte',        icon: '🏛️', type: 'EXPENSES' },
   { name: 'Regali',                 icon: '🎁', type: 'EXPENSES' },
   { name: 'Altro',                  icon: '📋', type: 'EXPENSES' },
+  { name: 'Utenze',                 icon: '⚡', type: 'EXPENSES' },
+  { name: 'Bellezza & Cura',        icon: '💄', type: 'EXPENSES' },
+  { name: 'Animali domestici',      icon: '🐾', type: 'EXPENSES' },
+  { name: 'Casa & Arredo',          icon: '🛋️', type: 'EXPENSES' },
+  { name: 'Strumenti lavoro',       icon: '🖥️', type: 'EXPENSES' },
 ]
 
 // ─── RISPARMI ────────────────────────────────────────────────────────────────
@@ -57,6 +65,7 @@ const DEBTS_CATEGORIES: SeedCategory[] = [
   { name: 'Carta di credito',       icon: '💳', type: 'DEBTS' },
   { name: 'Leasing / Rate',         icon: '📅', type: 'DEBTS' },
   { name: 'Altro debito',           icon: '⚖️', type: 'DEBTS' },
+  { name: 'Noleggio / Leasing Auto',icon: '🚗', type: 'DEBTS' },
 ]
 
 // ─── ENTRATE BUSINESS (FREELANCE / P.IVA) ────────────────────────────────────
