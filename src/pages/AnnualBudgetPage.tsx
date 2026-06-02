@@ -277,22 +277,37 @@ export function AnnualBudgetPage() {
         </div>
       )}
 
-      {/* Summary row */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 overflow-x-auto">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-          Ancora da allocare per mese
-        </p>
-        <div className="flex gap-2 min-w-max">
+      {/* Ancora da allocare per mese — prominente */}
+      <div className="bg-sidebar rounded-2xl shadow-sm p-5 overflow-x-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-white font-bold text-sm">Ancora da allocare</p>
+            <p className="text-white/50 text-xs">Reddito pianificato − spese − risparmi − debiti</p>
+          </div>
+        </div>
+        <div className="flex gap-3 min-w-max">
           {MONTH_NAMES.map((m, i) => {
             const month = i + 1
             const income = getMonthBudgetByType('INCOME', month)
             const out = ['EXPENSES', 'SAVINGS', 'DEBTS'].reduce((s, t) => s + getMonthBudgetByType(t, month), 0)
             const residual = income - out
+            const isCurrentMonth = month === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
             return (
-              <div key={m} className="text-center min-w-16">
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-1">{m}</p>
-                <p className={`text-xs font-bold ${residual >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {residual >= 0 ? '+' : ''}{formatCurrency(residual, currency)}
+              <div
+                key={m}
+                className={`text-center min-w-20 rounded-xl px-3 py-2.5 ${
+                  isCurrentMonth ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'
+                }`}
+              >
+                <p className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${
+                  isCurrentMonth ? 'text-white' : 'text-white/40'
+                }`}>{m}</p>
+                <p className={`text-sm font-bold ${
+                  residual > 0 ? 'text-emerald-400' :
+                  residual < 0 ? 'text-rose-400' :
+                  'text-white/30'
+                }`}>
+                  {income === 0 && out === 0 ? '—' : (residual >= 0 ? '+' : '') + formatCurrency(residual, currency)}
                 </p>
               </div>
             )

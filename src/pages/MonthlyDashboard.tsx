@@ -5,8 +5,9 @@ import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import { DonutProgressRing } from '@/components/ui/DonutProgressRing'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
-import { ChevronLeft, ChevronRight, PieChart, ArrowRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PieChart, ArrowRight, TrendingUp, TrendingDown } from 'lucide-react'
 import { LazyChart } from '@/components/ui/LazyChart'
+import { CategoryIcon } from '@/lib/categoryIcons'
 import type { Transaction, BudgetPlan, Category } from '@/lib/database.types'
 
 const TYPE_CONFIG = {
@@ -71,6 +72,11 @@ export function MonthlyDashboard() {
   const netEffective = effectiveByType['INCOME'] - effectiveByType['EXPENSES'] - effectiveByType['SAVINGS'] - effectiveByType['DEBTS']
   const netBudget = budgetByType['INCOME'] - budgetByType['EXPENSES'] - budgetByType['SAVINGS'] - budgetByType['DEBTS']
 
+  // "Ancora da allocare": reddito pianificato − tutto il resto pianificato
+  const daAllocareB = netBudget
+  const daAllocareE = netEffective
+  const hasBudget = budgetByType['INCOME'] > 0
+
   const barData = (Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => ({
     name: TYPE_CONFIG[type].label,
     budget: budgetByType[type] ?? 0,
@@ -126,6 +132,44 @@ export function MonthlyDashboard() {
           >
             <ChevronRight size={15} />
           </button>
+        </div>
+      </div>
+
+      {/* ── ANCORA DA ALLOCARE — hero card ────────────────────────────────── */}
+      <div className={`rounded-2xl p-5 flex items-center justify-between gap-4 shadow-sm ${
+        daAllocareE >= 0
+          ? 'bg-emerald-600 text-white'
+          : 'bg-rose-500 text-white'
+      }`}>
+        <div>
+          <p className="text-white/70 text-xs uppercase tracking-widest font-semibold mb-1">
+            Ancora da allocare — {monthName}
+          </p>
+          <p className="text-4xl font-black tracking-tight">
+            {daAllocareE >= 0 ? '+' : ''}{formatCurrency(daAllocareE, currency)}
+          </p>
+          <p className="text-white/60 text-xs mt-1">
+            effettivo questo mese
+          </p>
+        </div>
+        <div className="text-right shrink-0 space-y-2">
+          {hasBudget && (
+            <div className="bg-white/15 rounded-xl px-4 py-2">
+              <p className="text-white/60 text-[10px] uppercase tracking-wide mb-0.5">Budget pianificato</p>
+              <p className="text-xl font-bold">
+                {daAllocareB >= 0 ? '+' : ''}{formatCurrency(daAllocareB, currency)}
+              </p>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-1.5">
+            {daAllocareE >= 0
+              ? <TrendingUp size={16} className="text-white/80" />
+              : <TrendingDown size={16} className="text-white/80" />
+            }
+            <span className="text-white/80 text-xs font-medium">
+              {daAllocareE >= 0 ? 'Saldo positivo' : 'Saldo negativo'}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -235,7 +279,12 @@ export function MonthlyDashboard() {
                       const isGood = isIncome ? diff >= 0 : diff <= 0
                       return (
                         <tr key={cat.id} className="border-t border-gray-50 dark:border-gray-700/50 hover:bg-gray-50/60 dark:hover:bg-gray-700/30">
-                          <td className="px-5 py-2.5 text-gray-700 dark:text-gray-300">{cat.icon} {cat.name}</td>
+                          <td className="px-5 py-2.5 text-gray-700 dark:text-gray-300">
+                            <div className="flex items-center gap-2">
+                              <CategoryIcon name={cat.name} type={cat.type} size={13} />
+                              <span>{cat.name}</span>
+                            </div>
+                          </td>
                           <td className="px-5 py-2.5 text-right text-gray-400 dark:text-gray-500">{bud > 0 ? formatCurrency(bud, currency) : '—'}</td>
                           <td className="px-5 py-2.5 text-right font-medium text-gray-900 dark:text-gray-100">{eff > 0 ? formatCurrency(eff, currency) : '—'}</td>
                           <td className={`px-5 py-2.5 text-right font-medium ${bud > 0 ? (isGood ? 'text-emerald-500' : 'text-rose-400') : 'text-gray-300'}`}>
