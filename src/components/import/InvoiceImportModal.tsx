@@ -92,10 +92,15 @@ function findCol(headers: string[], patterns: RegExp): string {
 
 function parseInvoiceAmount(raw: string): number {
   if (!raw) return 0
-  let s = raw.trim().replace(/[€$£\s]/g, '')
+  let s = raw.trim()
+  // Rimuovi simboli valuta, codici ISO (EUR, USD, CHF...) e spazi
+  // SheetJS con raw:false formatta i numeri con il codice valuta del file
+  // es. "EUR 1.130,00" → bisogna strippare le lettere prima di parsare
+  s = s.replace(/[€$£¥₹]/g, '').replace(/[A-Za-z]/g, '').replace(/\s+/g, '')
+  if (!s) return 0
   const neg = s.startsWith('-')
   s = s.replace(/^[+-]/, '')
-  // Formato IT: 1.234,56
+  // Formato IT: 1.234,56 (virgola = decimale, punto = migliaia)
   if (s.includes(',') && s.includes('.') && s.lastIndexOf(',') > s.lastIndexOf('.')) {
     s = s.replace(/\./g, '').replace(',', '.')
   } else if (s.includes(',') && !s.includes('.')) {
@@ -119,6 +124,11 @@ function normalizeDate(raw: string): string {
   // DD/MM/YY
   const m2 = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2})$/)
   if (m2) return `20${m2[3]}-${m2[2].padStart(2,'0')}-${m2[1].padStart(2,'0')}`
+  // Excel serial number (es. 46174 = 2026-05-30)
+  if (/^\d{5}$/.test(s)) {
+    const d = new Date((parseInt(s) - 25569) * 86400 * 1000)
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10)
+  }
   return ''
 }
 
@@ -376,8 +386,10 @@ export function InvoiceImportModal({ onClose }: Props) {
         }
 
         const ws = wb.Sheets[wb.SheetNames[0]]
+        // raw: true → numeri come numeri puri (es. 1130, non "EUR 1.130,00")
+        // Le date Excel seriali (es. 46174) vengono gestite da normalizeDate
         const rawArrays = XLSX.utils.sheet_to_json<string[]>(ws, {
-          header: 1, raw: false, dateNF: 'DD/MM/YYYY', defval: '',
+          header: 1, raw: true, defval: '',
         })
 
         // Prima riga con ≥4 celle non vuote che contiene keyword di colonne fattura
