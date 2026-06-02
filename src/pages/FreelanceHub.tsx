@@ -35,7 +35,7 @@ const CAT_LABEL: Record<string, string> = {
 }
 
 export function FreelanceHub() {
-  const { profile, selectedYear } = useAppStore()
+  const { profile, selectedYear, setSelectedYear } = useAppStore()
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [grossInput, setGrossInput] = useState('')
@@ -168,14 +168,37 @@ export function FreelanceHub() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Freelance Hub</h1>
-        <button
-          onClick={() => qc.refetchQueries({ queryKey: ['invoices'] })}
-          disabled={invoicesLoading}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 border border-gray-200 hover:border-indigo-300 px-3 py-1.5 rounded-xl transition-colors disabled:opacity-40"
-        >
-          <RefreshCw size={14} className={invoicesLoading ? 'animate-spin' : ''} />
-          Aggiorna
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Selettore anno */}
+          <div className="flex items-center gap-1 border border-gray-200 rounded-xl overflow-hidden">
+            <button
+              onClick={() => setSelectedYear(selectedYear - 1)}
+              className="px-2.5 py-1.5 text-gray-500 hover:bg-gray-100 transition-colors text-sm font-medium"
+              aria-label="Anno precedente"
+            >
+              ←
+            </button>
+            <span className="px-3 py-1.5 text-sm font-bold text-gray-800 border-x border-gray-200 min-w-[56px] text-center">
+              {selectedYear}
+            </span>
+            <button
+              onClick={() => setSelectedYear(selectedYear + 1)}
+              disabled={selectedYear >= new Date().getFullYear()}
+              className="px-2.5 py-1.5 text-gray-500 hover:bg-gray-100 transition-colors text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Anno successivo"
+            >
+              →
+            </button>
+          </div>
+          <button
+            onClick={() => qc.refetchQueries({ queryKey: ['invoices'] })}
+            disabled={invoicesLoading}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-indigo-600 border border-gray-200 hover:border-indigo-300 px-3 py-1.5 rounded-xl transition-colors disabled:opacity-40"
+          >
+            <RefreshCw size={14} className={invoicesLoading ? 'animate-spin' : ''} />
+            Aggiorna
+          </button>
+        </div>
       </div>
 
       {/* Soglia Forfettaria */}
