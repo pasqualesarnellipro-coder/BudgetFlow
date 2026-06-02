@@ -14,6 +14,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { calcNetto } from '@/lib/nettometro'
@@ -310,6 +311,7 @@ async function extractWithAI(file: File): Promise<{ invoices: ExtractedInvoice[]
 export function InvoiceImportModal({ onClose }: Props) {
   const { profile } = useAppStore()
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [step, setStep] = useState<Step>('upload')
@@ -930,14 +932,35 @@ export function InvoiceImportModal({ onClose }: Props) {
                 <CheckCircle2 size={32} className="text-emerald-500" />
               </div>
               <div>
-                <p className="text-xl font-bold text-gray-900">Fatture importate!</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  <strong className="text-emerald-600">{importedCount}</strong> fatture salvate nel Freelance Hub.
-                </p>
+                {importedCount > 0 ? (
+                  <>
+                    <p className="text-xl font-bold text-gray-900">Fatture importate!</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      <strong className="text-emerald-600">{importedCount}</strong> fatture salvate nel database.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xl font-bold text-rose-600">Import non riuscito</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      0 fatture salvate — controlla i permessi Supabase o riprova.
+                    </p>
+                  </>
+                )}
               </div>
-              <button onClick={onClose} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700">
-                Chiudi
-              </button>
+              <div className="flex gap-3 justify-center">
+                {importedCount > 0 && (
+                  <button
+                    onClick={() => { onClose(); navigate('/freelance') }}
+                    className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700"
+                  >
+                    Vai al Freelance Hub →
+                  </button>
+                )}
+                <button onClick={onClose} className="border border-gray-200 text-gray-600 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50">
+                  Chiudi
+                </button>
+              </div>
             </div>
           )}
         </div>
