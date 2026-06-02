@@ -41,6 +41,7 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
   const [vatThreshold, setVatThreshold] = useState(existingProfile?.vat_threshold ?? 85000)
   const [atecoCoefficient, setAtecoCoefficient] = useState(existingProfile?.ateco_coefficient ?? 0.78)
   const [inpsRegime, setInpsRegime] = useState<InpsRegime>(existingProfile?.inps_regime ?? 'GESTIONE_SEPARATA')
+  const [inpsRiduzioneDipendente, setInpsRiduzioneDipendente] = useState((existingProfile?.inps_reduction_pct ?? 0) === 50)
   const [stipendioAnnuoLordo, setStipendioAnnuoLordo] = useState(existingProfile?.stipendio_annuo_lordo ?? 0)
   const [name, setName] = useState(existingProfile?.name ?? '')
   const [currency, setCurrency] = useState(existingProfile?.currency ?? 'EUR')
@@ -60,7 +61,7 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
       vat_threshold: vatThreshold,
       ateco_coefficient: atecoCoefficient,
       inps_regime: inpsRegime,
-      inps_reduction_pct: existingProfile?.inps_reduction_pct ?? 0,
+      inps_reduction_pct: inpsRiduzioneDipendente ? 50 : 0,
       stipendio_annuo_lordo: profileType === 'BOTH' ? stipendioAnnuoLordo : 0,
     }
 
@@ -96,7 +97,7 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
   }
 
   return (
-    <div className="min-h-screen bg-sidebar flex flex-col items-center justify-start py-8 px-4 overflow-y-auto">
+    <div className="min-h-screen bg-sidebar flex flex-col items-center justify-start py-8 px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
 
         {/* Header */}
@@ -209,7 +210,42 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
               {/* INPS regime */}
               <div className="mb-5">
                 <p className="text-sm font-semibold text-gray-700 mb-3">Regime INPS</p>
-                <InpsRegimeSelector value={inpsRegime} onChange={setInpsRegime} />
+                <InpsRegimeSelector value={inpsRegime} onChange={(v) => { setInpsRegime(v); if (v !== 'GESTIONE_SEPARATA') setInpsRiduzioneDipendente(false) }} />
+
+                {/* Riduzione 50% per dipendenti già coperti da INPS — solo BOTH + Gestione Separata */}
+                {profileType === 'BOTH' && inpsRegime === 'GESTIONE_SEPARATA' && (
+                  <button
+                    type="button"
+                    onClick={() => setInpsRiduzioneDipendente((v) => !v)}
+                    className={`mt-3 w-full flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all ${
+                      inpsRiduzioneDipendente
+                        ? 'border-violet-400 bg-violet-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      inpsRiduzioneDipendente ? 'bg-violet-500 border-violet-500' : 'border-gray-300'
+                    }`}>
+                      {inpsRiduzioneDipendente && <span className="text-white text-xs font-bold">✓</span>}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold ${inpsRiduzioneDipendente ? 'text-violet-700' : 'text-gray-800'}`}>
+                        Il mio datore di lavoro paga già l'INPS
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                        Lavoro dipendente con contratto ≥ 18 ore/sett → ho diritto alla <strong>riduzione 50%</strong> sulla Gestione Separata
+                      </p>
+                      {inpsRiduzioneDipendente && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium">
+                            26.23% → 13.12%
+                          </span>
+                          <span className="text-xs text-violet-500">applicato al calcolo INPS P.IVA</span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                )}
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-3">
