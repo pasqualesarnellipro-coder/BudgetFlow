@@ -161,16 +161,16 @@ export function WelcomePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold leading-tight">
-                {allDone ? 'Setup completato! 🎉' : `Benvenuto${profile?.name ? `, ${profile.name}` : ''}`}
+                {allDone ? 'Setup completato! 🎉' : `Benvenuto${profile?.name ? `, ${profile.name}` : ''}! 👋`}
               </h1>
               <p className="text-white/50 text-xs">
-                {allDone ? 'BudgetFlow è pronto al 100%' : 'BudgetFlow è pronto'}
+                {allDone ? 'BudgetFlow è pronto al 100%' : 'Il tuo profilo è configurato — inizia da qui'}
               </p>
             </div>
           </div>
 
           {/* Progress bar */}
-          <div className="mb-3">
+          <div className="mb-4">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-white/70 text-xs">
                 {allDone
@@ -190,32 +190,40 @@ export function WelcomePage() {
             </div>
           </div>
 
-          {/* Badge profilo — mostra esplicitamente il tipo configurato */}
-          <div className="flex items-center gap-2 mb-3 mt-1">
+          {/* CTA primaria — visibile subito senza scrollare */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => navigate(steps.find((s) => !isDone(s.completionKey))?.path ?? '/')}
+              className="flex items-center gap-2 bg-white text-sidebar font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-white/90 transition-colors shadow-lg"
+            >
+              {completedCount === 0 ? '🚀 Inizia subito' : `Continua: passo ${nextStepNum}`}
+              <ArrowRight size={14} />
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="text-xs text-white/50 hover:text-white/80 flex items-center gap-1 transition-colors"
+            >
+              Vai alla dashboard <ArrowRight size={11} />
+            </button>
+          </div>
+
+          {/* Badge profilo */}
+          <div className="flex items-center gap-2 mt-3">
             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
               isFreelance ? 'bg-indigo-500/30 text-indigo-200' : 'bg-emerald-500/30 text-emerald-200'
             }`}>
-              {profile?.profile_type === 'PERSONAL'  && '👤 Profilo: Privato'}
-              {profile?.profile_type === 'FREELANCE' && '💼 Profilo: Freelance / P.IVA'}
-              {profile?.profile_type === 'BOTH'      && '⚡ Profilo: Privato + Freelance'}
+              {profile?.profile_type === 'PERSONAL'  && '👤 Privato'}
+              {profile?.profile_type === 'FREELANCE' && '💼 Freelance / P.IVA'}
+              {profile?.profile_type === 'BOTH'      && '⚡ Privato + Freelance'}
             </span>
             <button
               onClick={() => navigate('/profile-setup')}
-              title="Modifica profilo e regime fiscale"
+              title="Modifica profilo"
               className="text-white/30 hover:text-white/70 transition-colors"
             >
               <UserCog size={13} />
             </button>
           </div>
-
-          {!allDone && (
-            <button
-              onClick={() => navigate('/')}
-              className="text-xs text-white/50 hover:text-white/80 flex items-center gap-1 transition-colors"
-            >
-              Salta per ora e vai alla dashboard <ArrowRight size={12} />
-            </button>
-          )}
         </div>
       </div>
 

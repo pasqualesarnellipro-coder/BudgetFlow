@@ -105,12 +105,16 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
     }
 
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
-    if (data) setProfile(data)
     setLoading(false)
     if (editMode) {
+      if (data) setProfile(data)
       navigate('/settings')
     } else {
-      setStep(4)  // Mostra riepilogo prima della dashboard
+      // Naviga prima (AuthGate monta AppLayout), poi setta il profilo nello store.
+      // In questo ordine WelcomePage viene mostrata correttamente invece di
+      // venire saltata dal re-render di AuthGate che smonterebbe OnboardingPage.
+      navigate('/welcome')
+      if (data) setProfile(data)
     }
   }
 
@@ -545,72 +549,6 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
             </div>
           )}
 
-          {/* STEP 4 — Riepilogo + INIZIAMO */}
-          {step === 4 && (
-            <div className="text-center">
-              {/* Icona successo */}
-              <div className="flex flex-col items-center pt-2 pb-5">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
-                  <span className="text-3xl">🎉</span>
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">Tutto pronto, {name}!</h2>
-                <p className="text-gray-500 text-sm mt-1">Ecco il tuo profilo configurato</p>
-              </div>
-
-              {/* Riepilogo */}
-              <div className="bg-gray-50 rounded-2xl p-5 text-left space-y-3 mb-6">
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-500">Profilo</span>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {profileType === 'PERSONAL' ? '👤 Solo personale' : profileType === 'FREELANCE' ? '💼 Freelance / P.IVA' : '⚡ Privato + Freelance'}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-500">Valuta</span>
-                  <span className="text-sm font-semibold text-gray-800">{currency}</span>
-                </div>
-                {isFreelance && (
-                  <>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-sm text-gray-500">Regime fiscale</span>
-                      <span className="text-sm font-semibold text-gray-800">
-                        {taxRegime === 'FORFETTARIO_5' ? 'Forfettario 5%' : taxRegime === 'FORFETTARIO_15' ? 'Forfettario 15%' : 'Ordinario'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-sm text-gray-500">INPS P.IVA</span>
-                      <span className="text-sm font-semibold text-gray-800">
-                        {inpsRiduzioneDipendente
-                          ? '13.12% (riduzione 50% dipendente)'
-                          : casoSpeciale && customInpsAliquota
-                          ? `${parseFloat(customInpsAliquota).toFixed(2)}% (personalizzato)`
-                          : `${INPS_BASE[inpsRegime]}% — ${inpsRegime === 'GESTIONE_SEPARATA' ? 'Gestione Separata' : inpsRegime === 'IVS_ARTIGIANI' ? 'IVS Artigiani' : 'IVS Commercianti'}`}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                      <span className="text-sm text-gray-500">Coeff. ATECO</span>
-                      <span className="text-sm font-semibold text-gray-800">{Math.round(atecoCoefficient * 100)}%</span>
-                    </div>
-                  </>
-                )}
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-gray-500">Categorie</span>
-                  <span className="text-sm font-semibold text-emerald-600">✓ Create automaticamente</span>
-                </div>
-              </div>
-
-              {/* CTA principale */}
-              <button
-                onClick={() => navigate('/')}
-                className="w-full bg-income text-white font-bold py-4 rounded-2xl text-base hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200"
-              >
-                INIZIAMO! →
-              </button>
-              <p className="text-xs text-gray-400 mt-3">
-                Puoi modificare tutto questo in qualsiasi momento dalle Impostazioni.
-              </p>
-            </div>
-          )}
 
         </div>
       </div>
