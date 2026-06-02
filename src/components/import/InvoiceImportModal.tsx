@@ -973,7 +973,18 @@ export function InvoiceImportModal({ onClose }: Props) {
                 </div>
                 <div className="bg-white rounded-xl p-3 shadow-sm">
                   <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Anno</p>
-                  <p className="text-xl font-bold text-gray-700">2026</p>
+                  <p className="text-xl font-bold text-gray-700">
+                    {(() => {
+                      const years = invoices
+                        .filter((_, i) => selected.has(i))
+                        .map((inv) => inv.date_issued?.slice(0, 4))
+                        .filter(Boolean)
+                      if (years.length === 0) return '—'
+                      const counts: Record<string, number> = {}
+                      for (const y of years) counts[y] = (counts[y] ?? 0) + 1
+                      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0]
+                    })()}
+                  </p>
                 </div>
               </div>
 
