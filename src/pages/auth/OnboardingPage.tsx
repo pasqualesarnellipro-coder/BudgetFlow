@@ -107,7 +107,11 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
     if (data) setProfile(data)
     setLoading(false)
-    navigate(editMode ? '/settings' : '/welcome')
+    if (editMode) {
+      navigate('/settings')
+    } else {
+      setStep(4)  // Mostra riepilogo prima della dashboard
+    }
   }
 
   const goNext = () => {
@@ -127,8 +131,8 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
     <div className="min-h-screen bg-sidebar flex flex-col items-center justify-start py-8 px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
 
-        {/* Header */}
-        <div className="bg-sidebar px-8 pt-8 pb-6">
+        {/* Header — nascosto al riepilogo finale */}
+        <div className={`bg-sidebar px-8 pt-8 pb-6 ${step === 4 ? 'hidden' : ''}`}>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-income text-xl">📊</span>
             <span className="text-white font-bold text-lg">BudgetFlow</span>
@@ -522,6 +526,73 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
                   }
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* STEP 4 — Riepilogo + INIZIAMO */}
+          {step === 4 && (
+            <div className="text-center">
+              {/* Icona successo */}
+              <div className="flex flex-col items-center pt-2 pb-5">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                  <span className="text-3xl">🎉</span>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Tutto pronto, {name}!</h2>
+                <p className="text-gray-500 text-sm mt-1">Ecco il tuo profilo configurato</p>
+              </div>
+
+              {/* Riepilogo */}
+              <div className="bg-gray-50 rounded-2xl p-5 text-left space-y-3 mb-6">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-sm text-gray-500">Profilo</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {profileType === 'PERSONAL' ? '👤 Solo personale' : profileType === 'FREELANCE' ? '💼 Freelance / P.IVA' : '⚡ Privato + Freelance'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-sm text-gray-500">Valuta</span>
+                  <span className="text-sm font-semibold text-gray-800">{currency}</span>
+                </div>
+                {isFreelance && (
+                  <>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-sm text-gray-500">Regime fiscale</span>
+                      <span className="text-sm font-semibold text-gray-800">
+                        {taxRegime === 'FORFETTARIO_5' ? 'Forfettario 5%' : taxRegime === 'FORFETTARIO_15' ? 'Forfettario 15%' : 'Ordinario'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-sm text-gray-500">INPS P.IVA</span>
+                      <span className="text-sm font-semibold text-gray-800">
+                        {inpsRiduzioneDipendente
+                          ? '13.12% (riduzione 50% dipendente)'
+                          : casoSpeciale && customInpsAliquota
+                          ? `${parseFloat(customInpsAliquota).toFixed(2)}% (personalizzato)`
+                          : `${INPS_BASE[inpsRegime]}% — ${inpsRegime === 'GESTIONE_SEPARATA' ? 'Gestione Separata' : inpsRegime === 'IVS_ARTIGIANI' ? 'IVS Artigiani' : 'IVS Commercianti'}`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-sm text-gray-500">Coeff. ATECO</span>
+                      <span className="text-sm font-semibold text-gray-800">{Math.round(atecoCoefficient * 100)}%</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-gray-500">Categorie</span>
+                  <span className="text-sm font-semibold text-emerald-600">✓ Create automaticamente</span>
+                </div>
+              </div>
+
+              {/* CTA principale */}
+              <button
+                onClick={() => navigate('/')}
+                className="w-full bg-income text-white font-bold py-4 rounded-2xl text-base hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200"
+              >
+                INIZIAMO! →
+              </button>
+              <p className="text-xs text-gray-400 mt-3">
+                Puoi modificare tutto questo in qualsiasi momento dalle Impostazioni.
+              </p>
             </div>
           )}
 
