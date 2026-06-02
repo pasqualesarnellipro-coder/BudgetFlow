@@ -123,8 +123,9 @@ function normalizeDate(raw: string): string {
 }
 
 function mapStatus(raw: string): InvoiceStatus {
-  const s = raw.toLowerCase()
-  if (/pag|paid|saldat/.test(s)) return 'PAID'
+  const s = raw.toLowerCase().trim()
+  // Fatture in Cloud: "SI" = saldato = pagato
+  if (s === 'si' || /pag|paid|saldat/.test(s)) return 'PAID'
   if (/scad|overdue|scadut/.test(s)) return 'OVERDUE'
   return 'PENDING'
 }
@@ -186,10 +187,13 @@ function detectColMap(headers: string[]): InvoiceColMap {
   const f = (patterns: RegExp) => headers.find((h) => patterns.test(h)) ?? ''
   return {
     client:  f(/cliente|client|ragione|intestat|denominaz|nome.client|customer/i),
-    date:    f(/data.emiss|data.fatt|date.issu|invoice.date/i) || f(/data|date/i),
-    amount:  f(/importo.lordo|totale.lordo|imponibile|gross|total.amount|totale.fatt/i) || f(/importo|totale|amount|total/i),
-    status:  f(/stato|status|pagament|payment/i),
-    dueDate: f(/scadenza|due.date|data.scad/i),
+    date:    f(/data.emiss|data.fatt|date.issu|invoice.date/i) || f(/^data$/i),
+    // "Lordo" = totale FiC (importo netto + eventuali addizionali); "Imponibile" come fallback
+    amount:  f(/importo.lordo|totale.lordo|gross|total.amount|totale.fatt/i) || f(/^lordo$/i) || f(/imponibile/i) || f(/importo|totale|amount|total/i),
+    // "Saldato" = colonna SI/NO di Fatture in Cloud
+    status:  f(/saldato/i) || f(/stato|status|pagament|payment/i),
+    // "Prox scadenza" di FiC
+    dueDate: f(/prox.scad|pross.scad|scadenza|due.date|data.scad/i),
     note:    f(/numero|num\.?fatt|invoice.num|n\.\s*fatt|note|oggetto/i),
   }
 }
@@ -337,10 +341,37 @@ export function InvoiceImportModal({ onClose }: Props) {
         const buf = await file.arrayBuffer()
         const wb = XLSX.read(buf, { type: 'array', cellDates: true })
         const ws = wb.Sheets[wb.SheetNames[0]]
-        const raw = XLSX.utils.sheet_to_json<Record<string, string>>(ws, {
-          raw: false, dateNF: 'DD/MM/YYYY', defval: '',
-        }) as Record<string, string>[]
-        const headers = raw.length > 0 ? Object.keys(raw[0]) : []
+
+        // Leggi come array grezzo per trovare la riga di header reale.
+        // File come l'export di Fatture in Cloud hanno 3-4 righe di titolo
+        // prima degli header effettivi — sheet_to_json di default usa la prima
+        // riga (vuota/titolo) come chiavi, rendendo inutilizzabili le colonne.
+        const rawArrays = XLSX.utils.sheet_to_json<string[]>(ws, {
+          header: 1, raw: false, dateNF: 'DD/MM/YYYY', defval: '',
+        })
+
+        // Prima riga con ≥4 celle non vuote che contiene keyword di colonne fattura
+        const headerRowIdx = rawArrays.findIndex((row) =>
+          (row as string[]).filter(Boolean).length >= 4 &&
+          (row as string[]).some((cell) =>
+            /data|cliente|client|importo|lordo|imponibile|numero|saldato|stato/i.test(String(cell))
+          )
+        )
+
+        if (headerRowIdx === -1) {
+          throw new Error(
+            'Intestazione non trovata nel file Excel.\n\n' +
+            'Assicurati che il file contenga colonne come "Data", "Cliente", "Importo" o "Lordo".'
+          )
+        }
+
+        const headers = (rawArrays[headerRowIdx] as string[]).map((h) => String(h ?? '').trim()).filter(Boolean)
+        const raw = rawArrays.slice(headerRowIdx + 1).map((row) => {
+          const obj: Record<string, string> = {}
+          headers.forEach((h, i) => { obj[h] = String((row as string[])[i] ?? '').trim() })
+          return obj
+        }).filter((r) => Object.values(r).some((v) => v))
+
         setRawRows(raw)
         setCsvHeaders(headers)
         setColMap(detectColMap(headers))
