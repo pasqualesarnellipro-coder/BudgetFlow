@@ -414,10 +414,19 @@ export function InvoiceImportModal({ onClose }: Props) {
           )
         }
 
-        const headers = (rawArrays[headerRowIdx] as string[]).map((h) => String(h ?? '').trim()).filter(Boolean)
+        const headers = (rawArrays[headerRowIdx] as unknown[]).map((h) => String(h ?? '').trim()).filter(Boolean)
         const raw = rawArrays.slice(headerRowIdx + 1).map((row) => {
           const obj: Record<string, string> = {}
-          headers.forEach((h, i) => { obj[h] = String((row as string[])[i] ?? '').trim() })
+          headers.forEach((h, i) => {
+            const val = (row as unknown[])[i] ?? ''
+            // SheetJS con cellDates:true restituisce Date objects per le celle data.
+            // String(Date) produrrebbe "Mon May 30 2026..." che normalizeDate non riconosce.
+            if (val instanceof Date) {
+              obj[h] = isNaN(val.getTime()) ? '' : val.toISOString().slice(0, 10)
+            } else {
+              obj[h] = String(val).trim()
+            }
+          })
           return obj
         }).filter((r) => Object.values(r).some((v) => v))
 
@@ -501,16 +510,22 @@ export function InvoiceImportModal({ onClose }: Props) {
         }
       })
 
+    let inserted = 0
     const CHUNK = 20
     for (let i = 0; i < toInsert.length; i += CHUNK) {
-      await supabase.from('invoices').insert(toInsert.slice(i, i + CHUNK))
+      const { error, data } = await supabase.from('invoices').insert(toInsert.slice(i, i + CHUNK)).select('id')
+      if (error) {
+        setError(`Errore Supabase: ${error.message}`)
+        setLoading(false)
+        setLoadingMsg('')
+        return
+      }
+      inserted += data?.length ?? 0
     }
 
-    // Invalida E ri-fetcha immediatamente — invalidateQueries da solo
-    // non forza il refetch se staleTime non è scaduto
     await qc.invalidateQueries({ queryKey: ['invoices'] })
     await qc.refetchQueries({ queryKey: ['invoices'] })
-    setImportedCount(toInsert.length)
+    setImportedCount(inserted)
     setLoading(false)
     setLoadingMsg('')
     setStep('done')
