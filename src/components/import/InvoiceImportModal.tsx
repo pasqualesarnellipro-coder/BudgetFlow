@@ -945,41 +945,66 @@ export function InvoiceImportModal({ onClose }: Props) {
           )}
 
           {/* ── STEP 3: Done ───────────────────────────────────────────────── */}
-          {step === 'done' && (
-            <div className="p-10 text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
-                <CheckCircle2 size={32} className="text-emerald-500" />
+          {step === 'done' && importedCount > 0 && (
+            <div className="flex flex-col items-center justify-center py-12 px-8 gap-6">
+              {/* Icona animata */}
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 size={40} className="text-emerald-500" strokeWidth={1.8} />
+                </div>
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                  {importedCount}
+                </div>
               </div>
-              <div>
-                {importedCount > 0 ? (
-                  <>
-                    <p className="text-xl font-bold text-gray-900">Fatture importate!</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      <strong className="text-emerald-600">{importedCount}</strong> fatture salvate nel database.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xl font-bold text-rose-600">Import non riuscito</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      0 fatture salvate — controlla i permessi Supabase o riprova.
-                    </p>
-                  </>
-                )}
+
+              {/* Titolo */}
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-900 mb-1">Fatto! 🎉</p>
+                <p className="text-gray-500 text-sm">
+                  <strong className="text-emerald-600 text-base">{importedCount} fatture</strong> importate nel Freelance Hub
+                </p>
               </div>
-              <div className="flex gap-3 justify-center">
-                {importedCount > 0 && (
-                  <button
-                    onClick={() => { onClose(); navigate('/freelance') }}
-                    className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700"
-                  >
-                    Vai al Freelance Hub →
-                  </button>
-                )}
-                <button onClick={onClose} className="border border-gray-200 text-gray-600 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50">
+
+              {/* Stats sintetiche */}
+              <div className="w-full max-w-sm bg-gray-50 rounded-2xl p-4 grid grid-cols-2 gap-3 text-center">
+                <div className="bg-white rounded-xl p-3 shadow-sm">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Fatture</p>
+                  <p className="text-xl font-bold text-indigo-600">{importedCount}</p>
+                </div>
+                <div className="bg-white rounded-xl p-3 shadow-sm">
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wide mb-1">Anno</p>
+                  <p className="text-xl font-bold text-gray-700">2026</p>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="flex gap-3 w-full max-w-sm">
+                <button
+                  onClick={() => { onClose(); navigate('/freelance') }}
+                  className="flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-xl hover:bg-indigo-700 transition-colors text-sm"
+                >
+                  Vai al Freelance Hub →
+                </button>
+                <button
+                  onClick={onClose}
+                  className="px-5 py-3 border border-gray-200 text-gray-500 rounded-xl hover:bg-gray-50 text-sm"
+                >
                   Chiudi
                 </button>
               </div>
+            </div>
+          )}
+
+          {step === 'done' && importedCount === 0 && (
+            <div className="flex flex-col items-center justify-center py-12 px-8 gap-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-rose-100 flex items-center justify-center">
+                <AlertTriangle size={32} className="text-rose-500" strokeWidth={1.8} />
+              </div>
+              <p className="text-xl font-bold text-rose-600">Import non riuscito</p>
+              <p className="text-sm text-gray-500">0 fatture salvate — riprova o contatta il supporto.</p>
+              <button onClick={onClose} className="border border-gray-200 text-gray-600 px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50">
+                Chiudi
+              </button>
             </div>
           )}
         </div>
