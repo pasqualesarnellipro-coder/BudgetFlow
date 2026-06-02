@@ -5,6 +5,7 @@ import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import type { Category, BudgetPlan, CategoryType } from '@/lib/database.types'
 import { useState, useRef } from 'react'
 import { X, ChevronRight, Check, Plus } from 'lucide-react'
+import { CategoryIcon } from '@/lib/categoryIcons'
 
 const TYPE_ICONS: Record<string, string[]> = {
   INCOME:   ['💼','🤝','↩️','🏠','📈','🏆','🎯','💻','🌍','➕'],
@@ -337,7 +338,10 @@ export function AnnualBudgetPage() {
                         }`}
                       >
                         <td className="px-4 py-2 font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">
-                          {cat.icon} {cat.name}
+                          <div className="flex items-center gap-2">
+                            <CategoryIcon name={cat.name} type={cat.type} size={13} />
+                            <span>{cat.name}</span>
+                          </div>
                         </td>
                         {MONTH_NAMES.map((_, i) => {
                           const month = i + 1

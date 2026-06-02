@@ -6,6 +6,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { TypeBadge } from '@/components/ui/TypeBadge'
 import { formatCurrency } from '@/lib/formatters'
 import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, PiggyBank, CreditCard, Upload, Download, SlidersHorizontal, ChevronUp, ChevronDown, X, Wallet } from 'lucide-react'
+import { CategoryIcon } from '@/lib/categoryIcons'
 import { ImportModal } from '@/components/import/ImportModal'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { Transaction, TransactionType, Category } from '@/lib/database.types'
@@ -495,7 +496,12 @@ export function TransactionsPage() {
                   <td className="px-4 py-3"><TypeBadge type={t.type} /></td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1.5">
-                      <span>{getCatIcon(t.category_id)}</span>
+                      {(() => {
+                        const cat = categories.find((c: Category) => c.id === t.category_id)
+                        return cat
+                          ? <CategoryIcon name={cat.name} type={cat.type} size={14} />
+                          : null
+                      })()}
                       <span className="text-gray-700 dark:text-gray-300">{getCatName(t.category_id)}</span>
                     </span>
                   </td>

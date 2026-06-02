@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES_FULL } from '@/lib/formatters'
 import { Plus, Trash2, RefreshCw, CheckCircle2, Clock, Repeat2, Download } from 'lucide-react'
+import { CategoryIcon } from '@/lib/categoryIcons'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { RecurringBill, BillPeriod, Category } from '@/lib/database.types'
 
@@ -260,7 +261,6 @@ export function BillsPage() {
   }, 0)
 
   const getCatName = (id: string) => categories.find((c: Category) => c.id === id)?.name ?? '—'
-  const getCatIcon = (id: string) => categories.find((c: Category) => c.id === id)?.icon ?? ''
   const isGeneratedThisMonth = (id: string) => getGeneratedBillIds(currentYear, currentMonth).includes(id)
 
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
@@ -416,9 +416,12 @@ export function BillsPage() {
                     <tr key={b.id} className="border-t border-gray-50 dark:border-gray-700/50 hover:bg-gray-50/60 dark:hover:bg-gray-700/30">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-base">
-                            {getCatIcon(b.category_id) || getSubscriptionEmoji(b.name)}
-                          </div>
+                          {(() => {
+                            const cat = categories.find((c: Category) => c.id === b.category_id)
+                            return cat
+                              ? <CategoryIcon name={cat.name} type={cat.type} size={16} />
+                              : <div className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-base">{getSubscriptionEmoji(b.name)}</div>
+                          })()}
                           <div>
                             <p className="font-medium text-gray-900 dark:text-gray-100">{b.name}</p>
                             <p className="text-xs text-gray-400 dark:text-gray-500">{getCatName(b.category_id)}</p>

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { Plus, Pencil, Trash2, Sparkles, Eye, EyeOff } from 'lucide-react'
+import { CategoryIcon } from '@/lib/categoryIcons'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
 import type { Category, CategoryType } from '@/lib/database.types'
 
@@ -220,9 +221,7 @@ export function CategoriesPage() {
                       !cat.active ? 'opacity-50' : ''
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 flex items-center justify-center text-base shrink-0">
-                      {cat.icon}
-                    </div>
+                    <CategoryIcon name={cat.name} type={cat.type} size={16} />
                     <span className={`flex-1 text-sm font-medium ${cat.active ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 line-through'}`}>
                       {cat.name}
                     </span>
@@ -296,6 +295,9 @@ export function CategoriesPage() {
                 <div className="w-10 h-10 bg-white dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xl shadow-sm">
                   {form.icon}
                 </div>
+                {modal && (
+                  <CategoryIcon name={form.name || '_'} type={modal.type} size={16} />
+                )}
                 <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">{form.name || 'Nome categoria'}</p>
               </div>
 
