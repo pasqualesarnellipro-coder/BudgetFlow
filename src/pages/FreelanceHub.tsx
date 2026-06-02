@@ -6,14 +6,13 @@ import { useAppStore } from '@/store/useAppStore'
 import { calcNetto } from '@/lib/nettometro'
 import { formatCurrency, MONTH_NAMES_FULL } from '@/lib/formatters'
 import { DonutProgressRing } from '@/components/ui/DonutProgressRing'
-import { FICConnect } from '@/components/fic/FICConnect'
 import {
   calcFiscale, buildScadenze, buildMonthlyRateChart,
   type FiscaleInput,
 } from '@/lib/fiscalePlanning'
 import type { Invoice, InvoiceStatus } from '@/lib/database.types'
 import {
-  Plus, Trash2, Link, TrendingUp, Euro, Wallet, ShieldCheck,
+  Plus, Trash2, TrendingUp, Euro, Wallet, ShieldCheck,
   CalendarClock, ChevronDown, ChevronUp, Info, BarChart2, Upload,
 } from 'lucide-react'
 import { InvoiceImportModal } from '@/components/import/InvoiceImportModal'
@@ -58,7 +57,7 @@ export function FreelanceHub() {
   const [accontiINPS, setAccontiINPS] = useState(0)
   const [giàAccantonato, setGiàAccantonato] = useState(0)
 
-  const { data: invoices = [] } = useQuery({
+  const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
     queryKey: ['invoices', profile?.id, selectedYear],
     queryFn: async () => {
       const { data } = await supabase
@@ -206,9 +205,16 @@ export function FreelanceHub() {
           <div key={kpi.label} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3" style={{ borderTop: `4px solid ${kpi.color}` }}>
             <div className="flex-1">
               <p className="text-xs text-gray-500 uppercase tracking-wide">{kpi.label}</p>
-              <p className="text-lg font-bold text-gray-900">{formatCurrency(kpi.value, currency)}</p>
+              {invoicesLoading ? (
+                <div className="h-7 w-20 bg-gray-100 rounded-lg animate-pulse mt-1" />
+              ) : (
+                <p className="text-lg font-bold text-gray-900">{formatCurrency(kpi.value, currency)}</p>
+              )}
             </div>
-            <DonutProgressRing percentage={kpi.pct} color={kpi.color} size={52} strokeWidth={6} />
+            {invoicesLoading
+              ? <div className="w-[52px] h-[52px] rounded-full bg-gray-100 animate-pulse shrink-0" />
+              : <DonutProgressRing percentage={kpi.pct} color={kpi.color} size={52} strokeWidth={6} />
+            }
           </div>
         ))}
       </div>
@@ -516,18 +522,6 @@ export function FreelanceHub() {
         </div>
       </div>
 
-      {/* Connessione Fatture in Cloud */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Link size={16} className="text-indigo-500" /> Integrazione Fatture in Cloud
-          </h2>
-          <button onClick={() => navigate('/settings')} className="text-xs text-gray-400 hover:text-gray-600">
-            Gestisci →
-          </button>
-        </div>
-        <FICConnect />
-      </div>
 
       {/* Fatture Emesse */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
