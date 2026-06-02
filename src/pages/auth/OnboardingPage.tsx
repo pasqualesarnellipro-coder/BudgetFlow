@@ -42,6 +42,17 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
   const [atecoCoefficient, setAtecoCoefficient] = useState(existingProfile?.ateco_coefficient ?? 0.78)
   const [inpsRegime, setInpsRegime] = useState<InpsRegime>(existingProfile?.inps_regime ?? 'GESTIONE_SEPARATA')
   const [inpsRiduzioneDipendente, setInpsRiduzioneDipendente] = useState((existingProfile?.inps_reduction_pct ?? 0) === 50)
+
+  // Caso speciale: aliquota personalizzata (pensionato, cassa professionale, ecc.)
+  const INPS_BASE: Record<InpsRegime, number> = { GESTIONE_SEPARATA: 26.23, IVS_ARTIGIANI: 24.00, IVS_COMMERCIANTI: 24.48 }
+  const existingReduction = existingProfile?.inps_reduction_pct ?? 0
+  const isCustom = existingReduction !== 0 && existingReduction !== 50
+  const [casoSpeciale, setCasoSpeciale] = useState(isCustom)
+  const [customInpsAliquota, setCustomInpsAliquota] = useState(
+    isCustom
+      ? String(+(INPS_BASE[existingProfile?.inps_regime ?? 'GESTIONE_SEPARATA'] * (1 - existingReduction / 100)).toFixed(2))
+      : ''
+  )
   const [stipendioAnnuoLordo, setStipendioAnnuoLordo] = useState(existingProfile?.stipendio_annuo_lordo ?? 0)
   const [name, setName] = useState(existingProfile?.name ?? '')
   const [currency, setCurrency] = useState(existingProfile?.currency ?? 'EUR')
@@ -61,7 +72,18 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
       vat_threshold: vatThreshold,
       ateco_coefficient: atecoCoefficient,
       inps_regime: inpsRegime,
-      inps_reduction_pct: inpsRiduzioneDipendente ? 50 : 0,
+      inps_reduction_pct: (() => {
+        if (casoSpeciale && customInpsAliquota !== '') {
+          const base = INPS_BASE[inpsRegime]
+          const custom = parseFloat(customInpsAliquota)
+          if (!isNaN(custom) && custom >= 0 && custom < base) {
+            return Math.round((1 - custom / base) * 100)
+          }
+          if (!isNaN(custom) && custom === 0) return 100
+        }
+        if (inpsRiduzioneDipendente) return 50
+        return 0
+      })(),
       stipendio_annuo_lordo: profileType === 'BOTH' ? stipendioAnnuoLordo : 0,
     }
 
@@ -246,6 +268,50 @@ export function OnboardingPage({ userId, editMode = false }: OnboardingPageProps
                     </div>
                   </button>
                 )}
+                {/* Caso speciale: aliquota personalizzata */}
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setCasoSpeciale((v) => !v); setCustomInpsAliquota('') }}
+                    className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+                  >
+                    {casoSpeciale ? '✕ Annulla caso speciale' : 'Caso speciale? (pensionato, cassa professionale, esente…)'}
+                  </button>
+
+                  {casoSpeciale && (
+                    <div className="mt-2.5 bg-orange-50 border border-orange-200 rounded-xl p-4">
+                      <p className="text-xs font-bold text-orange-800 mb-2">Aliquota INPS personalizzata</p>
+                      <p className="text-xs text-orange-600 mb-3 leading-relaxed">
+                        Inserisci la tua aliquota effettiva. Esempi:
+                        <span className="block mt-1 space-y-0.5">
+                          <span className="block">· <strong>0%</strong> — Cassa professionale (ENPAM, Cassa Forense, INARCASSA…)</span>
+                          <span className="block">· <strong>13.12%</strong> — Dipendente già coperto (= riduzione 50%)</span>
+                          <span className="block">· <strong>24%</strong> — Pensionato in Gestione Separata</span>
+                        </span>
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max={INPS_BASE[inpsRegime]}
+                            value={customInpsAliquota}
+                            onChange={(e) => setCustomInpsAliquota(e.target.value)}
+                            placeholder={`Es. 0 — max ${INPS_BASE[inpsRegime]}%`}
+                            className="w-full border border-orange-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
+                        </div>
+                        {customInpsAliquota !== '' && !isNaN(parseFloat(customInpsAliquota)) && (
+                          <div className="text-xs text-orange-700 font-medium whitespace-nowrap">
+                            {INPS_BASE[inpsRegime]}% → <strong>{parseFloat(customInpsAliquota).toFixed(2)}%</strong>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4 mb-5 space-y-3">
