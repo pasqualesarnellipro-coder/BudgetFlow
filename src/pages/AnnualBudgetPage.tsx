@@ -2,9 +2,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
-import type { Category, BudgetPlan } from '@/lib/database.types'
+import type { Category, BudgetPlan, CategoryType } from '@/lib/database.types'
 import { useState, useRef } from 'react'
-import { X, ChevronRight, Check } from 'lucide-react'
+import { X, ChevronRight, Check, Plus } from 'lucide-react'
+
+const TYPE_ICONS: Record<string, string[]> = {
+  INCOME:   ['💼','🤝','↩️','🏠','📈','🏆','🎯','💻','🌍','➕'],
+  EXPENSES: ['🏠','🛒','🍽️','🚇','⛽','🩺','📺','📱','👔','🏃','🎓','🎭','✈️','🛡️','🏛️','🎁','💄','🐾','🛋️','⚡','📋'],
+  SAVINGS:  ['🔐','🌅','📊','🏡','🧳','🎯','🏦','💰','✈️','🎁'],
+  DEBTS:    ['🔑','📝','💳','📅','⚖️','🚗','🏦'],
+}
 
 const TYPE_CONFIG = {
   INCOME:   { label: 'Reddito',  color: '#10b981' },
@@ -26,6 +33,9 @@ export function AnnualBudgetPage() {
   const qc = useQueryClient()
   const [saving, setSaving] = useState(false)
   const [fillPanel, setFillPanel] = useState<FillPanel | null>(null)
+  const [addingCatType, setAddingCatType] = useState<CategoryType | null>(null)
+  const [newCatName, setNewCatName] = useState('')
+  const [newCatIcon, setNewCatIcon] = useState('📋')
   // Feedback cella: chiave "catId-month" → mostra ✓ per 1.2s dopo il save
   const [savedCell, setSavedCell] = useState<string | null>(null)
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -114,6 +124,23 @@ export function AnnualBudgetPage() {
       amount: suggestedAmount,
       fromMonth,
     })
+  }
+
+  const handleAddCategory = async () => {
+    if (!profile || !addingCatType || !newCatName.trim()) return
+    setSaving(true)
+    await supabase.from('categories').insert({
+      user_id: profile.id,
+      name: newCatName.trim(),
+      icon: newCatIcon,
+      type: addingCatType,
+      active: true,
+    })
+    await qc.invalidateQueries({ queryKey: ['categories'] })
+    setSaving(false)
+    setAddingCatType(null)
+    setNewCatName('')
+    setNewCatIcon('📋')
   }
 
   const currency = profile?.currency ?? 'EUR'
@@ -389,6 +416,75 @@ export function AnnualBudgetPage() {
                         )}
                       </td>
                       <td />
+                    </tr>
+                  )}
+
+                  {/* Riga "+ Nuova categoria" */}
+                  {addingCatType === type ? (
+                    <tr className="border-t border-dashed border-indigo-200 dark:border-indigo-700 bg-indigo-50/30 dark:bg-indigo-950/20">
+                      <td className="px-3 py-2" colSpan={15}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Emoji picker rapido */}
+                          <div className="flex gap-1 flex-wrap">
+                            {(TYPE_ICONS[type] ?? ['📋']).map((emoji) => (
+                              <button
+                                key={emoji}
+                                type="button"
+                                onClick={() => setNewCatIcon(emoji)}
+                                className={`text-base w-7 h-7 rounded-lg transition-all ${
+                                  newCatIcon === emoji
+                                    ? 'bg-indigo-200 dark:bg-indigo-800 ring-2 ring-indigo-400 scale-110'
+                                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                          {/* Input nome */}
+                          <input
+                            autoFocus
+                            type="text"
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddCategory()
+                              if (e.key === 'Escape') { setAddingCatType(null); setNewCatName('') }
+                            }}
+                            placeholder="Nome categoria…"
+                            className="border border-indigo-300 dark:border-indigo-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-800 dark:text-gray-100 w-48"
+                          />
+                          <button
+                            onClick={handleAddCategory}
+                            disabled={!newCatName.trim() || saving}
+                            className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-40"
+                          >
+                            {saving ? '...' : 'Aggiungi'}
+                          </button>
+                          <button
+                            onClick={() => { setAddingCatType(null); setNewCatName('') }}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr className="border-t border-dashed border-gray-200 dark:border-gray-700">
+                      <td colSpan={15} className="px-4 py-1.5">
+                        <button
+                          onClick={() => {
+                            setAddingCatType(type as CategoryType)
+                            setNewCatName('')
+                            setNewCatIcon((TYPE_ICONS[type] ?? ['📋'])[0])
+                          }}
+                          className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                        >
+                          <Plus size={12} />
+                          Nuova categoria {TYPE_CONFIG[type].label.toLowerCase()}
+                        </button>
+                      </td>
                     </tr>
                   )}
                 </tbody>
