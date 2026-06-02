@@ -166,7 +166,7 @@ export function AccountsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">I miei conti</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">I miei conti</h1>
           <p className="text-sm text-gray-400 mt-0.5">Gestisci più conti e carte, tieni tutto sotto controllo</p>
         </div>
         <button
@@ -180,16 +180,16 @@ export function AccountsPage() {
       {/* KPI totali */}
       {accounts.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
             <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Patrimonio totale</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalBalance, currency)}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(totalBalance, currency)}</p>
             <p className="text-xs text-gray-400 mt-1">{accounts.length} conti attivi</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
             <p className="text-xs text-emerald-600 uppercase tracking-wide mb-1">Entrate anno</p>
             <p className="text-2xl font-bold text-emerald-600">+{formatCurrency(totalIn, currency)}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-4">
             <p className="text-xs text-rose-500 uppercase tracking-wide mb-1">Uscite anno</p>
             <p className="text-2xl font-bold text-rose-500">-{formatCurrency(totalOut, currency)}</p>
           </div>
@@ -198,12 +198,12 @@ export function AccountsPage() {
 
       {/* Lista conti */}
       {accounts.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-600 p-12 text-center">
           <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-4">
             <Wallet size={28} className="text-indigo-400" strokeWidth={1.5} />
           </div>
-          <p className="text-gray-700 font-semibold text-lg">Nessun conto ancora</p>
-          <p className="text-gray-400 text-sm mt-1 mb-5">
+          <p className="text-gray-700 dark:text-gray-200 font-semibold text-lg">Nessun conto ancora</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1 mb-5">
             Aggiungi i tuoi conti bancari, carte e portafogli per avere una visione completa delle tue finanze.
           </p>
           <button onClick={openNew} className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700">
@@ -218,7 +218,7 @@ export function AccountsPage() {
             return (
               <div
                 key={acc.id}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700"
               >
                 {/* Banda colorata + header */}
                 <div className="p-5 relative" style={{ background: `linear-gradient(135deg, ${acc.color}18, ${acc.color}08)` }}>
@@ -237,8 +237,8 @@ export function AccountsPage() {
                       {acc.icon}
                     </div>
                     <div>
-                      <p className="font-bold text-gray-900">{acc.name}</p>
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                      <p className="font-bold text-gray-900 dark:text-gray-100">{acc.name}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 mt-0.5">
                         <TypeIcon size={11} />
                         {acc.bank_name ? `${acc.bank_name} · ` : ''}{typeConfig(acc.type).label}
                       </p>
@@ -253,7 +253,7 @@ export function AccountsPage() {
 
                 {/* Stats movimenti */}
                 {stats && (
-                  <div className="px-5 py-3 flex gap-4 bg-gray-50 border-t border-gray-100">
+                  <div className="px-5 py-3 flex gap-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700">
                     <div>
                       <p className="text-xs text-gray-400">Entrate</p>
                       <p className="text-sm font-semibold text-emerald-600">+{formatCurrency(stats.in, currency)}</p>
@@ -270,11 +270,11 @@ export function AccountsPage() {
                 )}
 
                 {/* Azioni */}
-                <div className="px-4 py-3 flex items-center gap-2 border-t border-gray-100">
+                <div className="px-4 py-3 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700">
                   {!acc.is_default && (
                     <button
                       onClick={() => handleSetDefault(acc.id)}
-                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-amber-500 transition-colors"
+                      className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-amber-500 transition-colors"
                     >
                       <Star size={12} /> Imposta principale
                     </button>
@@ -289,13 +289,13 @@ export function AccountsPage() {
                     </button>
                     <button
                       onClick={() => openEdit(acc)}
-                      className="p-1.5 text-gray-300 hover:text-gray-600 rounded-lg hover:bg-gray-50"
+                      className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       <Pencil size={13} />
                     </button>
                     <button
                       onClick={() => handleDelete(acc.id)}
-                      className="p-1.5 text-gray-300 hover:text-rose-500 rounded-lg hover:bg-rose-50"
+                      className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20"
                     >
                       <Trash2 size={13} />
                     </button>
@@ -308,7 +308,7 @@ export function AccountsPage() {
           {/* Card aggiungi nuovo */}
           <button
             onClick={openNew}
-            className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-5 flex flex-col items-center justify-center gap-2 text-gray-300 hover:border-indigo-300 hover:text-indigo-400 transition-all min-h-48"
+            className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-600 p-5 flex flex-col items-center justify-center gap-2 text-gray-300 dark:text-gray-600 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-400 dark:hover:text-indigo-400 transition-all min-h-48"
           >
             <Plus size={24} />
             <span className="text-sm font-medium">Aggiungi conto</span>
@@ -319,10 +319,10 @@ export function AccountsPage() {
       {/* ── Modal crea/modifica ─────────────────────────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
 
-            <div className="px-6 pt-5 pb-4 border-b bg-gray-50 flex items-center justify-between sticky top-0">
-              <h2 className="text-lg font-bold text-gray-900">
+            <div className="px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-between sticky top-0">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {editingId ? 'Modifica conto' : 'Nuovo conto'}
               </h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
@@ -367,7 +367,7 @@ export function AccountsPage() {
                       className={`p-2 rounded-xl border text-center transition-all ${
                         form.bank_name === b.name
                           ? 'border-indigo-400 bg-indigo-50 ring-1 ring-indigo-300'
-                          : 'border-gray-100 hover:border-gray-300 bg-gray-50'
+                          : 'border-gray-100 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-700'
                       }`}
                     >
                       {/* Monogramma colorato — riconoscibile e coerente tra OS */}
@@ -394,7 +394,7 @@ export function AccountsPage() {
                   value={form.name ?? ''}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   autoFocus
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                 />
               </div>
 
@@ -410,12 +410,12 @@ export function AccountsPage() {
                       className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all ${
                         form.type === value
                           ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-gray-100 hover:border-gray-200 bg-gray-50'
+                          : 'border-gray-100 dark:border-gray-600 hover:border-gray-200 dark:hover:border-gray-500 bg-gray-50 dark:bg-gray-700'
                       }`}
                     >
                       <Icon size={16} className={form.type === value ? 'text-indigo-600' : 'text-gray-400'} />
                       <div>
-                        <p className={`text-xs font-semibold ${form.type === value ? 'text-indigo-700' : 'text-gray-700'}`}>{label}</p>
+                        <p className={`text-xs font-semibold ${form.type === value ? 'text-indigo-700' : 'text-gray-700 dark:text-gray-300'}`}>{label}</p>
                         <p className="text-[10px] text-gray-400 leading-tight">{desc}</p>
                       </div>
                     </button>
@@ -445,7 +445,7 @@ export function AccountsPage() {
                     id="acc-currency"
                     value={form.currency ?? 'EUR'}
                     onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                    className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                   >
                     <option value="EUR">EUR €</option>
                     <option value="USD">USD $</option>
@@ -490,14 +490,14 @@ export function AccountsPage() {
                       maxLength={7}
                       placeholder="#6366f1"
                       aria-label="Colore personalizzato in formato esadecimale"
-                      className="w-24 border border-gray-200 rounded-lg px-2 py-1 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                      className="w-24 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Conto principale */}
-              <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
+              <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-600 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                 <input
                   type="checkbox"
                   checked={form.is_default ?? false}
@@ -505,7 +505,7 @@ export function AccountsPage() {
                   className="accent-amber-500 w-4 h-4"
                 />
                 <div>
-                  <p className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                     <Star size={13} className="text-amber-500" fill="currentColor" /> Conto principale
                   </p>
                   <p className="text-xs text-gray-400">Preselezionato quando aggiungi nuove transazioni</p>
@@ -522,7 +522,7 @@ export function AccountsPage() {
                   placeholder="Es. IBAN, numero carta, note personali…"
                   value={form.notes ?? ''}
                   onChange={(e) => setForm({ ...form, notes: e.target.value || null })}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50"
+                  className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                 />
               </div>
 
