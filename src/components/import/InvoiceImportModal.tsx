@@ -512,14 +512,27 @@ export function InvoiceImportModal({ onClose }: Props) {
         }
       })
 
+    // ── DEBUG: verifica dati prima dell'insert ─────────────────────────────
+    if (toInsert.length === 0) {
+      setError('Nessuna fattura selezionata da importare.')
+      setLoading(false); setLoadingMsg(''); return
+    }
+
+    // Test insert sul primo record per vedere la risposta Supabase
+    const testRecord = toInsert[0]
+    const { error: testError } = await supabase.from('invoices').insert([testRecord])
+    if (testError) {
+      setError(`Errore Supabase (codice ${testError.code}): ${testError.message}\n\nDettagli: ${testError.details ?? ''}\nHint: ${testError.hint ?? ''}\n\nRecord tentato:\nuser_id=${testRecord.user_id}\ndate=${testRecord.date_issued}\namount=${testRecord.amount_gross}`)
+      setLoading(false); setLoadingMsg(''); return
+    }
+
+    // Se il primo va, inserisco gli altri
     const CHUNK = 20
-    for (let i = 0; i < toInsert.length; i += CHUNK) {
-      const { error } = await supabase.from('invoices').insert(toInsert.slice(i, i + CHUNK))
+    for (let i = 1; i < toInsert.length; i += CHUNK) {
+      const { error } = await supabase.from('invoices').insert(toInsert.slice(i, Math.min(i + CHUNK, toInsert.length)))
       if (error) {
-        setError(`Errore Supabase: ${error.message}`)
-        setLoading(false)
-        setLoadingMsg('')
-        return
+        setError(`Errore Supabase (record ${i}+): ${error.message}`)
+        setLoading(false); setLoadingMsg(''); return
       }
     }
 
@@ -556,6 +569,15 @@ export function InvoiceImportModal({ onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+
+        {/* Errore globale — sempre visibile sopra tutto */}
+        {error && step === 'preview' && (
+          <div className="bg-rose-500 text-white px-5 py-3 flex gap-3 shrink-0">
+            <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+            <pre className="text-xs leading-relaxed whitespace-pre-wrap flex-1">{error}</pre>
+            <button onClick={() => setError(null)} className="text-white/70 hover:text-white text-lg leading-none shrink-0">×</button>
+          </div>
+        )}
 
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
