@@ -339,13 +339,43 @@ export function InvoiceImportModal({ onClose }: Props) {
       } else if (ext === 'xlsx' || ext === 'xls') {
         setLoadingMsg('Analisi Excel...')
         const buf = await file.arrayBuffer()
-        const wb = XLSX.read(buf, { type: 'array', cellDates: true })
-        const ws = wb.Sheets[wb.SheetNames[0]]
 
-        // Leggi come array grezzo per trovare la riga di header reale.
-        // File come l'export di Fatture in Cloud hanno 3-4 righe di titolo
-        // prima degli header effettivi — sheet_to_json di default usa la prima
-        // riga (vuota/titolo) come chiavi, rendendo inutilizzabili le colonne.
+        // ── Lettura robusta: 3 tentativi in cascata ────────────────────────────
+        // I file .xls di Fatture in Cloud hanno un compound document leggermente
+        // corrotto che fa fallire la lettura standard di SheetJS.
+        let wb: ReturnType<typeof XLSX.read> | null = null
+        const readAttempts = [
+          () => XLSX.read(buf, { type: 'array', cellDates: true, WTF: false }),
+          () => XLSX.read(buf, { type: 'array', cellDates: false, WTF: false, dense: true }),
+          () => {
+            // Fallback binario — converte il buffer in stringa binaria
+            const u8 = new Uint8Array(buf)
+            let bin = ''
+            for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i])
+            return XLSX.read(bin, { type: 'binary', cellDates: true, WTF: false })
+          },
+        ]
+        for (const attempt of readAttempts) {
+          try { wb = attempt(); break } catch { /* prossimo tentativo */ }
+        }
+
+        // ── Fallback AI se tutti i tentativi falliscono ────────────────────────
+        if (!wb || !wb.SheetNames.length) {
+          setLoadingMsg('Excel non leggibile — analisi AI in corso… (Claude estrae i dati)')
+          const result = await extractWithAI(file)
+          extracted = result.invoices
+          setAiUsage(result.usage)
+          if (extracted.length === 0) throw new Error(
+            'Impossibile leggere il file Excel né con il parser standard né con l\'AI.\n\n' +
+            'Soluzione: apri il file in Excel o Google Sheets → File → Scarica come .xlsx → ricarica il file .xlsx convertito.'
+          )
+          setInvoices(extracted)
+          setSelected(new Set(extracted.map((_, i) => i)))
+          setStep('preview')
+          return
+        }
+
+        const ws = wb.Sheets[wb.SheetNames[0]]
         const rawArrays = XLSX.utils.sheet_to_json<string[]>(ws, {
           header: 1, raw: false, dateNF: 'DD/MM/YYYY', defval: '',
         })
@@ -361,7 +391,8 @@ export function InvoiceImportModal({ onClose }: Props) {
         if (headerRowIdx === -1) {
           throw new Error(
             'Intestazione non trovata nel file Excel.\n\n' +
-            'Assicurati che il file contenga colonne come "Data", "Cliente", "Importo" o "Lordo".'
+            'Assicurati che il file contenga colonne come "Data", "Cliente", "Importo" o "Lordo".\n' +
+            'Se è un export di Fatture in Cloud, il formato è supportato automaticamente.'
           )
         }
 
