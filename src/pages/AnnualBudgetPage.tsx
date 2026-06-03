@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import type { Category, BudgetPlan, CategoryType } from '@/lib/database.types'
-import { useState, useRef } from 'react'
-import { X, ChevronRight, Check, Plus } from 'lucide-react'
+import { useState, useRef, useCallback } from 'react'
+import { X, ChevronRight, Check, Plus, ArrowUp, ArrowDown } from 'lucide-react'
 import { CategoryIcon } from '@/lib/categoryIcons'
 
 const TYPE_ICONS: Record<string, string[]> = {
@@ -145,6 +145,35 @@ export function AnnualBudgetPage() {
   }
 
   const currency = profile?.currency ?? 'EUR'
+
+  // ── Ordine categorie per sezione — salvato in localStorage ───────────────────
+  const storageKey = `bf_cat_order_${profile?.id ?? 'anon'}`
+  const [catOrders, setCatOrders] = useState<Record<string, string[]>>(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) ?? '{}') } catch { return {} }
+  })
+
+  const getOrderedCats = useCallback((type: string, cats: Category[]): Category[] => {
+    const order = catOrders[type]
+    if (!order || order.length === 0) return cats
+    const indexed = new Map(cats.map((c) => [c.id, c]))
+    const sorted = order.filter((id) => indexed.has(id)).map((id) => indexed.get(id)!)
+    // Aggiungi eventuali nuove categorie non ancora nell'ordine
+    const missing = cats.filter((c) => !order.includes(c.id))
+    return [...sorted, ...missing]
+  }, [catOrders])
+
+  const moveCategory = useCallback((type: string, catId: string, dir: 'up' | 'down', cats: Category[]) => {
+    const ordered = getOrderedCats(type, cats)
+    const idx = ordered.findIndex((c) => c.id === catId)
+    if (dir === 'up' && idx === 0) return
+    if (dir === 'down' && idx === ordered.length - 1) return
+    const newOrder = ordered.map((c) => c.id)
+    const swapIdx = dir === 'up' ? idx - 1 : idx + 1
+    ;[newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]]
+    const updated = { ...catOrders, [type]: newOrder }
+    setCatOrders(updated)
+    localStorage.setItem(storageKey, JSON.stringify(updated))
+  }, [catOrders, getOrderedCats, storageKey])
 
   const getMonthBudgetByType = (type: string, month: number) =>
     (categories as Category[])
@@ -376,7 +405,8 @@ export function AnnualBudgetPage() {
 
       {/* Tabelle per tipo ────────────────────────────────────────────────── */}
       {(Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
-        const typeCats = (categories as Category[]).filter((c) => c.type === type)
+        const rawCats = (categories as Category[]).filter((c) => c.type === type)
+        const typeCats = getOrderedCats(type, rawCats)
         if (!typeCats.length) return null
         return (
           <div key={type} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
@@ -392,7 +422,7 @@ export function AnnualBudgetPage() {
               <table className="w-full text-sm min-w-max">
                 <thead>
                   <tr className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-50 dark:border-gray-700">
-                    <th className="text-left px-4 py-2 w-44">Categoria</th>
+                    <th className="text-left px-4 py-2 w-52">Categoria</th>
                     {MONTH_NAMES.map((m) => (
                       <th key={m} className="text-right px-2 py-2 w-20">{m}</th>
                     ))}
@@ -401,9 +431,11 @@ export function AnnualBudgetPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {typeCats.map((cat) => {
+                  {typeCats.map((cat, catIdx) => {
                     const total = MONTH_NAMES.reduce((s, _, i) => s + getAmount(cat.id, i + 1), 0)
                     const isActiveFill = fillPanel?.catId === cat.id
+                    const isFirst = catIdx === 0
+                    const isLast = catIdx === typeCats.length - 1
                     return (
                       <tr
                         key={cat.id}
@@ -411,8 +443,27 @@ export function AnnualBudgetPage() {
                           isActiveFill ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : 'hover:bg-gray-50/50 dark:hover:bg-gray-700/20'
                         }`}
                       >
-                        <td className="px-4 py-2 font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
+                        <td className="px-2 py-2 font-medium text-gray-800 dark:text-gray-200 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            {/* Frecce riordino — visibili al hover */}
+                            <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button
+                                onClick={() => moveCategory(type, cat.id, 'up', rawCats)}
+                                disabled={isFirst}
+                                title="Sposta su"
+                                className="p-0.5 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ArrowUp size={11} />
+                              </button>
+                              <button
+                                onClick={() => moveCategory(type, cat.id, 'down', rawCats)}
+                                disabled={isLast}
+                                title="Sposta giù"
+                                className="p-0.5 rounded text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                              >
+                                <ArrowDown size={11} />
+                              </button>
+                            </div>
                             <CategoryIcon name={cat.name} type={cat.type} size={13} />
                             <span>{cat.name}</span>
                           </div>
