@@ -253,8 +253,8 @@ export function applyColumnMap(rows: Record<string, string>[], map: ColumnMap): 
     }
 
     const date = parseDate(rawDate)
-    if (!date && !rawDate) return  // salta righe senza data
-    if (amount === 0 && !rawAmount) return  // salta righe vuote
+    if (!rawDate && !rawDesc && amount === 0) return  // salta righe completamente vuote
+    if (amount === 0 && !rawAmount) return             // salta righe senza importo
 
     // Descrizione: combina CAUSALE + DESCRIZIONE se entrambe presenti
     let description = rawDesc.trim()
@@ -282,53 +282,140 @@ export function applyColumnMap(rows: Record<string, string>[], map: ColumnMap): 
 
 // ─── Parser CSV ──────────────────────────────────────────────────────────────
 
-export async function parseCSV(file: File): Promise<ImportPreviewResult> {
+function detectEncoding(buf: ArrayBuffer): string {
+  // Rileva BOM UTF-8 (EF BB BF) o UTF-16 LE (FF FE)
+  const bytes = new Uint8Array(buf.slice(0, 4))
+  if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return 'UTF-8'
+  if (bytes[0] === 0xFF && bytes[1] === 0xFE) return 'UTF-16LE'
+  // Euristica: se ci sono byte > 0x7F tipici di ISO-8859-1 (es. à=0xE0, è=0xE8)
+  const sample = new Uint8Array(buf.slice(0, 2000))
+  let highBytes = 0
+  for (const b of sample) if (b > 0x7F && b < 0xA0) highBytes++  // range tipico ISO-8859-1
+  return highBytes > 2 ? 'ISO-8859-1' : 'UTF-8'
+}
+
+async function readFileAsText(file: File, encoding: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      encoding: 'UTF-8',
-      complete: (results) => {
-        const headers = results.meta.fields ?? []
-        const rows = results.data as Record<string, string>[]
-        const suggested = suggestColumns(headers, rows)
-        const parsed = applyColumnMap(rows, suggested)
-        const warnings: string[] = []
-        if (results.errors.length > 0) {
-          warnings.push(`${results.errors.length} righe con errori di parsing ignorate.`)
-        }
-        resolve({ headers, rows, suggested, parsed, fileName: file.name, totalRows: rows.length, warnings })
-      },
-      error: reject,
-    })
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsText(file, encoding)
   })
+}
+
+export async function parseCSV(file: File): Promise<ImportPreviewResult> {
+  const buf = await file.arrayBuffer()
+  const encoding = detectEncoding(buf)
+  const text = await readFileAsText(file, encoding)
+
+  const warnings: string[] = []
+  if (encoding !== 'UTF-8') warnings.push(`Rilevata codifica ${encoding} — caratteri speciali convertiti automaticamente.`)
+
+  // Primo tentativo con auto-rilevamento delimitatore
+  let result = Papa.parse<Record<string, string>>(text, {
+    header: true, skipEmptyLines: true, transformHeader: (h) => h.trim(),
+  })
+  let headers = result.meta.fields ?? []
+  let rows = result.data
+
+  // Se non trova colonne utili, prova saltando righe-intestazione non-dati
+  if (headers.length < 2 || rows.length === 0) {
+    const lines = text.split('\n').filter((l) => l.trim())
+    const headerLineIdx = lines.findIndex((l) =>
+      /data|date|import|amount|descriz|descri|causale|moviment/i.test(l)
+    )
+    if (headerLineIdx > 0) {
+      const trimmed = lines.slice(headerLineIdx).join('\n')
+      result = Papa.parse<Record<string, string>>(trimmed, {
+        header: true, skipEmptyLines: true, transformHeader: (h) => h.trim(),
+      })
+      headers = result.meta.fields ?? []
+      rows = result.data
+    }
+  }
+
+  if (result.errors.length > 0) warnings.push(`${result.errors.length} righe con errori di parsing ignorate.`)
+
+  const suggested = suggestColumns(headers, rows)
+  const parsed = applyColumnMap(rows, suggested)
+
+  return { headers, rows, suggested, parsed, fileName: file.name, totalRows: rows.length, warnings }
 }
 
 // ─── Parser Excel ─────────────────────────────────────────────────────────────
 
 export async function parseExcel(file: File): Promise<ImportPreviewResult> {
   const buf = await file.arrayBuffer()
-  const wb = XLSX.read(buf, { type: 'array', cellDates: true })
+  const warnings: string[] = []
+
+  // ── 3 tentativi in cascata (gestisce .xls corrotti come quelli di Fatture in Cloud) ──
+  let wb: ReturnType<typeof XLSX.read> | null = null
+  const readAttempts = [
+    () => XLSX.read(buf, { type: 'array', cellDates: true, WTF: false }),
+    () => XLSX.read(buf, { type: 'array', cellDates: false, WTF: false, dense: true }),
+    () => {
+      const u8 = new Uint8Array(buf)
+      let bin = ''
+      for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i])
+      return XLSX.read(bin, { type: 'binary', cellDates: true, WTF: false })
+    },
+  ]
+  for (const attempt of readAttempts) {
+    try { wb = attempt(); break } catch { /* prossimo tentativo */ }
+  }
+  if (!wb || !wb.SheetNames.length) throw new Error('File Excel non leggibile. Prova a salvarlo come .xlsx da Excel o Google Sheets e ricaricalo.')
+
   const ws = wb.Sheets[wb.SheetNames[0]]
-  const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'YYYY-MM-DD' })
 
-  if (raw.length < 2) throw new Error('File Excel vuoto o non valido.')
+  // raw:true → numeri come numeri puri (non "EUR 1.234,56" con raw:false)
+  // Le date seriali Excel (es. 46174) vengono gestite da parseDate via normalizeDate
+  const rawArrays = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: '' })
 
-  // Prima riga non vuota = headers
-  let headerIdx = 0
-  while (headerIdx < raw.length && (raw[headerIdx] as string[]).every((c) => !c)) headerIdx++
+  if (rawArrays.length < 2) throw new Error('File Excel vuoto o non valido.')
 
-  const headers = (raw[headerIdx] as string[]).map((h) => String(h ?? '').trim()).filter(Boolean)
-  const dataRows = raw.slice(headerIdx + 1).map((row) => {
+  // ── Trova la riga di intestazione per keyword (ignora righe sommario in testa) ──
+  const headerKeywords = /data|date|import|amount|descriz|descri|causale|moviment|cliente|client|lordo|avere|dare/i
+  let headerIdx = rawArrays.findIndex((row) =>
+    (row as unknown[]).filter(Boolean).length >= 2 &&
+    (row as unknown[]).some((cell) => headerKeywords.test(String(cell ?? '')))
+  )
+  // Fallback: prima riga non vuota
+  if (headerIdx === -1) {
+    headerIdx = rawArrays.findIndex((row) => (row as unknown[]).filter(Boolean).length >= 2)
+  }
+  if (headerIdx === -1) throw new Error('Intestazione non trovata nel file Excel.')
+
+  const headers = (rawArrays[headerIdx] as unknown[])
+    .map((h) => String(h ?? '').trim())
+    .filter(Boolean)
+
+  const dataRows = rawArrays.slice(headerIdx + 1).map((row) => {
     const obj: Record<string, string> = {}
-    headers.forEach((h, i) => { obj[h] = String((row as string[])[i] ?? '').trim() })
+    headers.forEach((h, i) => {
+      const val = (row as unknown[])[i] ?? ''
+      // SheetJS con cellDates:true restituisce Date objects — convertiamo subito
+      if (val instanceof Date) {
+        obj[h] = isNaN(val.getTime()) ? '' : val.toISOString().slice(0, 10)
+      } else if (typeof val === 'number') {
+        // Numeri puri: preserviamo il valore numerico come stringa senza formattazione
+        obj[h] = String(val)
+      } else {
+        obj[h] = String(val).trim()
+      }
+    })
     return obj
   }).filter((r) => Object.values(r).some((v) => v))
+
+  if (dataRows.length === 0) throw new Error('Nessuna riga di dati trovata nel file Excel.')
 
   const suggested = suggestColumns(headers, dataRows)
   const parsed = applyColumnMap(dataRows, suggested)
 
-  return { headers, rows: dataRows, suggested, parsed, fileName: file.name, totalRows: dataRows.length, warnings: [] }
+  if (parsed.length === 0) {
+    warnings.push('Nessuna transazione rilevata automaticamente — verifica il mapping delle colonne nel passo successivo.')
+  }
+
+  return { headers, rows: dataRows, suggested, parsed, fileName: file.name, totalRows: dataRows.length, warnings }
 }
 
 // ─── Parser PDF (text extraction) ────────────────────────────────────────────
