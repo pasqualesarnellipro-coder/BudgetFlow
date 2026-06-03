@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency, MONTH_NAMES } from '@/lib/formatters'
 import type { Category, BudgetPlan, CategoryType } from '@/lib/database.types'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, Fragment } from 'react'
 import { X, ChevronRight, Check, Plus, ArrowUp, ArrowDown } from 'lucide-react'
 import { CategoryIcon } from '@/lib/categoryIcons'
 
@@ -375,8 +375,8 @@ export function AnnualBudgetPage() {
                     const isFirst = catIdx === 0
                     const isLast = catIdx === typeCats.length - 1
                     return (
+                      <Fragment key={cat.id}>
                       <tr
-                        key={cat.id}
                         className={`border-t border-gray-50 dark:border-gray-700/50 group ${
                           isActiveFill ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : 'hover:bg-gray-50/50 dark:hover:bg-gray-700/20'
                         }`}
@@ -525,6 +525,7 @@ export function AnnualBudgetPage() {
                           </td>
                         </tr>
                       )}
+                      </Fragment>
                     )
                   })}
                   {/* Riga totale sezione */}
