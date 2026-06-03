@@ -287,13 +287,42 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
       return
     }
 
+    // ── Deduplicazione: confronta con transazioni già esistenti ──────────────
+    setLoadingMsg('Controllo duplicati...')
+    const dateMin = toInsert.reduce((m, r) => r.date < m ? r.date : m, toInsert[0].date)
+    const dateMax = toInsert.reduce((m, r) => r.date > m ? r.date : m, toInsert[0].date)
+    const { data: existing } = await supabase
+      .from('transactions')
+      .select('date, description, amount')
+      .eq('user_id', profile.id)
+      .gte('date', dateMin)
+      .lte('date', dateMax)
+
+    const existingKeys = new Set(
+      (existing ?? []).map((t) => `${t.date}|${t.description}|${t.amount}`)
+    )
+
+    const newOnly = toInsert.filter(
+      (r) => !existingKeys.has(`${r.date}|${r.description}|${Math.abs(r.amount)}`)
+    )
+
+    if (newOnly.length === 0) {
+      setImportedCount(0)
+      setLoading(false)
+      setLoadingMsg('')
+      setStep('done')
+      return
+    }
+
+    setLoadingMsg('Salvataggio...')
+
     // Insert a chunk con gestione errori esplicita
     const CHUNK = 25
     let saved = 0
     const insertErrors: string[] = []
 
-    for (let i = 0; i < toInsert.length; i += CHUNK) {
-      const chunk = toInsert.slice(i, i + CHUNK)
+    for (let i = 0; i < newOnly.length; i += CHUNK) {
+      const chunk = newOnly.slice(i, i + CHUNK)
       const { error: insErr } = await supabase.from('transactions').insert(chunk)
       if (insErr) {
         // Retry riga per riga per salvare il massimo
@@ -312,6 +341,7 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
 
     await qc.invalidateQueries({ queryKey: ['transactions'] })
     setImportedCount(saved)
+    setLoadingMsg('')
     setLoading(false)
 
     if (insertErrors.length > 0 && saved === 0) {
@@ -888,7 +918,7 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
           )}
 
           {/* ── STEP 4: Done ─────────────────────────────────────────────────── */}
-          {step === 'done' && (
+          {step === 'done' && importedCount > 0 && (
             <div className="p-10 text-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
                 <CheckCircle2 size={32} className="text-emerald-500" />
@@ -904,11 +934,30 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
                   const skipped = selectedCount - importedCount
                   return skipped > 0 ? (
                     <p className="text-xs text-amber-600 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      ⚠️ <strong>{skipped}</strong> righe non salvate perché prive di categoria valida.
-                      Torna indietro e assegna una categoria a ogni transazione.
+                      ⚠️ <strong>{skipped}</strong> già presenti o prive di categoria — saltate.
                     </p>
                   ) : null
                 })()}
+              </div>
+              <button
+                onClick={onClose}
+                className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700"
+              >
+                Chiudi
+              </button>
+            </div>
+          )}
+
+          {step === 'done' && importedCount === 0 && (
+            <div className="p-10 text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={32} className="text-amber-500" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-gray-900">Nessuna novità</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Tutte le transazioni del file erano già presenti — nessun duplicato inserito.
+                </p>
               </div>
               <button
                 onClick={onClose}
