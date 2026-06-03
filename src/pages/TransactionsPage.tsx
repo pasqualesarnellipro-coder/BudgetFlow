@@ -106,7 +106,8 @@ export function TransactionsPage() {
     .filter((t: Transaction) => {
       if (filterType !== 'ALL' && t.type !== filterType) return false
       if (filterCategory && t.category_id !== filterCategory) return false
-      if (filterAccount && t.account_id !== filterAccount) return false
+      if (filterAccount === '__none__' && t.account_id) return false
+      if (filterAccount && filterAccount !== '__none__' && t.account_id !== filterAccount) return false
       if (filterMonth && new Date(t.date).getMonth() + 1 !== filterMonth) return false
       if (search && !t.description.toLowerCase().includes(search.toLowerCase())) return false
       return true
@@ -246,6 +247,20 @@ export function TransactionsPage() {
   }
 
   const clearSelection = () => { setSelectedIds(new Set()); setAllFilteredSelected(false) }
+
+  // Modifica conto inline su singola riga
+  const [inlineAccountTxId, setInlineAccountTxId] = useState<string | null>(null)
+
+  const handleInlineAccount = async (txId: string, accountId: string) => {
+    await supabase
+      .from('transactions')
+      .update({ account_id: accountId || null })
+      .eq('id', txId)
+    qc.invalidateQueries({ queryKey: ['transactions'] })
+    qc.invalidateQueries({ queryKey: ['tx_by_account'] })
+    qc.invalidateQueries({ queryKey: ['calc_balances'] })
+    setInlineAccountTxId(null)
+  }
 
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -390,6 +405,7 @@ export function TransactionsPage() {
                 className="border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
               >
                 <option value="">Tutti i conti</option>
+                <option value="__none__">⚪ Senza conto</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>{a.icon} {a.name}</option>
                 ))}
@@ -525,21 +541,42 @@ export function TransactionsPage() {
                       className="accent-indigo-600 w-4 h-4 cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-gray-500 dark:text-gray-400">{t.date}</span>
-                      {(() => {
-                        const acc = accounts.find((a) => a.id === t.account_id)
-                        return acc ? (
-                          <span className="flex items-center gap-1">
-                            <span
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: acc.color }}
-                            />
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[90px]">{acc.name}</span>
-                          </span>
-                        ) : null
-                      })()}
+                      {/* Conto — click per cambiare inline */}
+                      {inlineAccountTxId === t.id ? (
+                        <select
+                          autoFocus
+                          defaultValue={t.account_id ?? ''}
+                          onChange={(e) => handleInlineAccount(t.id, e.target.value)}
+                          onBlur={() => setInlineAccountTxId(null)}
+                          className="text-[11px] border border-indigo-300 rounded-lg px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-400 max-w-[130px]"
+                        >
+                          <option value="">— Nessun conto —</option>
+                          {accounts.map((a) => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <button
+                          onClick={() => setInlineAccountTxId(t.id)}
+                          title="Clicca per cambiare conto"
+                          className="flex items-center gap-1 group/acc"
+                        >
+                          {(() => {
+                            const acc = accounts.find((a) => a.id === t.account_id)
+                            return acc ? (
+                              <>
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acc.color }} />
+                                <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[90px] group-hover/acc:text-indigo-500 transition-colors">{acc.name}</span>
+                              </>
+                            ) : (
+                              <span className="text-[10px] text-gray-300 dark:text-gray-600 group-hover/acc:text-indigo-400 transition-colors italic">+ conto</span>
+                            )
+                          })()}
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3"><TypeBadge type={t.type} /></td>
