@@ -236,14 +236,31 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
 
   // ─── Step 3: Import ──────────────────────────────────────────────────────────
 
+  /** Verifica che una stringa sia una data ISO valida (YYYY-MM-DD) con giorno/mese reali */
+  const sanitizeDate = (raw: string): string => {
+    const today = new Date().toISOString().slice(0, 10)
+    if (!raw) return today
+    // Accetta solo YYYY-MM-DD con valori sensati
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (!m) return today
+    const [, y, mo, d] = m.map(Number)
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2000 || y > 2100) return today
+    // Verifica ulteriore con Date
+    const dt = new Date(`${m[1]}-${m[2]}-${m[3]}`)
+    return isNaN(dt.getTime()) ? today : raw
+  }
+
   const handleImport = async () => {
     if (!profile) return
     setLoading(true)
+    setError(null)
 
+    // Mappa l'indice originale della riga — rows[i]._i se presente (tabella sortata),
+    // altrimenti l'indice nell'array originale
     const toInsert = rows
-      .filter((_, i) => selected.has(i))
-      .map((row) => {
-        const origIdx = rows.indexOf(row)
+      .map((row, i) => ({ row, origIdx: (row as typeof row & { _i?: number })._i ?? i }))
+      .filter(({ origIdx }) => selected.has(origIdx))
+      .map(({ row, origIdx }) => {
         const catId = catMap[origIdx]
         const type = row.amount >= 0 ? 'INCOME' : 'EXPENSES'
         const cat = catId
@@ -252,7 +269,7 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
 
         return {
           user_id: profile.id,
-          date: row.date.match(/^\d{4}-\d{2}-\d{2}$/) ? row.date : new Date().toISOString().slice(0, 10),
+          date: sanitizeDate(row.date),
           type: cat?.type ?? type,
           category_id: cat?.id ?? localCats.find((c) => c.type === type && c.active)?.id ?? '',
           description: row.description || 'Importato',
@@ -262,16 +279,50 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
           account_id: selectedAccountId || null,
         }
       })
-      .filter((r) => r.category_id)
+      .filter((r) => r.category_id)  // scarta righe senza categoria
 
-    const CHUNK = 50
-    for (let i = 0; i < toInsert.length; i += CHUNK) {
-      await supabase.from('transactions').insert(toInsert.slice(i, i + CHUNK))
+    if (toInsert.length === 0) {
+      setError('Nessuna transazione valida da importare. Assegna almeno una categoria.')
+      setLoading(false)
+      return
     }
 
-    qc.invalidateQueries({ queryKey: ['transactions'] })
-    setImportedCount(toInsert.length)
+    // Insert a chunk con gestione errori esplicita
+    const CHUNK = 25
+    let saved = 0
+    const insertErrors: string[] = []
+
+    for (let i = 0; i < toInsert.length; i += CHUNK) {
+      const chunk = toInsert.slice(i, i + CHUNK)
+      const { error: insErr } = await supabase.from('transactions').insert(chunk)
+      if (insErr) {
+        // Retry riga per riga per salvare il massimo
+        for (const record of chunk) {
+          const { error: singleErr } = await supabase.from('transactions').insert([record])
+          if (singleErr) {
+            insertErrors.push(`${record.date} ${record.description.slice(0, 30)}: ${singleErr.message}`)
+          } else {
+            saved++
+          }
+        }
+      } else {
+        saved += chunk.length
+      }
+    }
+
+    await qc.invalidateQueries({ queryKey: ['transactions'] })
+    setImportedCount(saved)
     setLoading(false)
+
+    if (insertErrors.length > 0 && saved === 0) {
+      setError(`Errore import: ${insertErrors[0]}`)
+      return
+    }
+    if (insertErrors.length > 0) {
+      // Alcune salvate, alcune no → vai a done con warning
+      setStep('done')
+      return
+    }
     setStep('done')
   }
 
@@ -847,6 +898,17 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
                 <p className="text-sm text-gray-500 mt-1">
                   <strong className="text-emerald-600">{importedCount}</strong> transazioni importate con successo.
                 </p>
+                {/* Avviso righe scartate per mancanza categoria */}
+                {(() => {
+                  const selectedCount = rows.filter((_, i) => selected.has(i)).length
+                  const skipped = selectedCount - importedCount
+                  return skipped > 0 ? (
+                    <p className="text-xs text-amber-600 mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      ⚠️ <strong>{skipped}</strong> righe non salvate perché prive di categoria valida.
+                      Torna indietro e assegna una categoria a ogni transazione.
+                    </p>
+                  ) : null
+                })()}
               </div>
               <button
                 onClick={onClose}
