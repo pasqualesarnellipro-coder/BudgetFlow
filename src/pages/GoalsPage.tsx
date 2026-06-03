@@ -210,7 +210,24 @@ export function GoalsPage() {
 
   const handleSave = async () => {
     if (!profile || !form.name || !form.target_amount) return
-    const linkedCategoryId = form.category_id || null
+
+    let linkedCategoryId = form.category_id || null
+
+    // ── Se non c'è categoria collegata, creane una SAVINGS automaticamente ──────
+    // Questo connette l'obiettivo al resto dell'app (transazioni, budget, dashboard)
+    if (!linkedCategoryId && !editingId) {
+      const { data: newCat } = await supabase
+        .from('categories')
+        .insert({ user_id: profile.id, name: form.name, icon: form.icon, type: 'SAVINGS', active: true })
+        .select()
+        .single()
+      if (newCat) {
+        linkedCategoryId = newCat.id
+        qc.invalidateQueries({ queryKey: ['categories'] })
+        qc.invalidateQueries({ queryKey: ['categories_savings'] })
+      }
+    }
+
     const payload = {
       user_id: profile.id,
       name: form.name,
@@ -224,6 +241,7 @@ export function GoalsPage() {
       year: selectedYear,
       category_id: linkedCategoryId,
     }
+
     if (editingId) {
       await supabase.from('saving_goals').update(payload).eq('id', editingId)
     } else {
@@ -242,9 +260,32 @@ export function GoalsPage() {
   const handleAddContrib = async (goal: SavingGoal) => {
     const amount = parseFloat(contribAmount)
     if (!amount || amount <= 0) return
-    await supabase.from('saving_goals')
-      .update({ current_amount: goal.current_amount + amount })
-      .eq('id', goal.id)
+
+    if (goal.category_id) {
+      // ── Crea una vera transazione SAVINGS → appare in tutta l'app ────────────
+      // (dashboard, transazioni, budget, margine mensile)
+      await supabase.from('transactions').insert({
+        user_id: profile!.id,
+        date: new Date().toISOString().slice(0, 10),
+        type: 'SAVINGS',
+        category_id: goal.category_id,
+        description: `Risparmio — ${goal.name}`,
+        amount,
+        is_business: false,
+        activity_name: null,
+        account_id: null,
+      })
+      // Invalida transazioni e il contatore risparmiato nell'obiettivo
+      qc.invalidateQueries({ queryKey: ['transactions'] })
+      qc.invalidateQueries({ queryKey: ['transactions_savings'] })
+    } else {
+      // Nessuna categoria → aggiorna current_amount direttamente (fallback)
+      await supabase
+        .from('saving_goals')
+        .update({ current_amount: goal.current_amount + amount })
+        .eq('id', goal.id)
+    }
+
     qc.invalidateQueries({ queryKey: ['saving_goals'] })
     setAddContribId(null)
     setContribAmount('')
@@ -437,7 +478,7 @@ export function GoalsPage() {
                       onClick={() => { setAddContribId(g.id); setContribAmount('') }}
                       className="w-full text-xs font-medium py-1.5 rounded-lg border border-dashed border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-indigo-300 dark:hover:border-indigo-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     >
-                      + Aggiungi risparmio
+                      + Aggiungi risparmio {g.category_id ? '→ crea transazione' : ''}
                     </button>
                   )}
                 </div>
@@ -505,8 +546,17 @@ export function GoalsPage() {
               {/* Collega a categoria risparmio */}
               <div>
                 <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
-                  Collega a categoria risparmio <span className="font-normal normal-case text-gray-400 dark:text-gray-500">(opzionale)</span>
+                  Collega a categoria risparmio
+                  <HelpTooltip content="Collegando una categoria, ogni risparmio aggiunto creerà una vera transazione visibile ovunque nell'app (Dashboard, Budget, Transazioni). Se non selezioni nulla, viene creata automaticamente una categoria con il nome dell'obiettivo." position="right" />
                 </label>
+                {!editingId && !form.category_id && (
+                  <div className="mb-2 flex items-start gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-3 py-2">
+                    <span className="text-emerald-500 text-sm mt-0.5">✨</span>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                      Verrà creata automaticamente una categoria risparmio <strong>"{form.name || 'con il nome dell\'obiettivo'}"</strong>. Ogni contributo aggiungerà una transazione reale collegata.
+                    </p>
+                  </div>
+                )}
                 <select
                   value={form.category_id}
                   onChange={(e) => {
@@ -521,14 +571,14 @@ export function GoalsPage() {
                   }}
                   className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50 dark:bg-gray-700 dark:text-gray-100"
                 >
-                  <option value="">— Nessun collegamento —</option>
+                  <option value="">— Crea categoria automaticamente —</option>
                   {(savingsCategories as { id: string; icon: string; name: string }[]).map((c) => (
                     <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                   ))}
                 </select>
                 {form.category_id && (
                   <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                    🔗 Risparmiato calcolato da transazioni: <strong>{formatCurrency(getSavedFromTx(form.category_id), currency)}</strong>
+                    🔗 Risparmiato da transazioni reali: <strong>{formatCurrency(getSavedFromTx(form.category_id), currency)}</strong>
                   </p>
                 )}
               </div>
