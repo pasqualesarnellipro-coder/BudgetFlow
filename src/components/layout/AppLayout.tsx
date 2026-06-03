@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigation } from 'react-router-dom'
 import { Menu, TrendingUp } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { useAppStore } from '@/store/useAppStore'
@@ -32,6 +32,8 @@ export function AppLayout() {
     return !v
   })
   const { pathname } = useLocation()
+  const navigation = useNavigation()
+  const isNavigating = navigation.state === 'loading'
 
   // ── Titolo tab dinamico ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -61,7 +63,13 @@ export function AppLayout() {
         onToggleCollapse={toggleCollapse}
       />
 
-      <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 flex flex-col min-w-0">
+      <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 flex flex-col min-w-0 relative">
+        {/* Barra di caricamento in cima durante navigazione/refresh */}
+        {isNavigating && (
+          <div className="absolute top-0 left-0 right-0 z-50 h-0.5 bg-indigo-100 overflow-hidden">
+            <div className="h-full bg-indigo-500 animate-[loading_1s_ease-in-out_infinite]" style={{ width: '40%', animation: 'slide 1s ease-in-out infinite' }} />
+          </div>
+        )}
         {/* Header mobile — landmark <header> per screen reader */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-10 shrink-0">
           <button

@@ -34,3 +34,10 @@ body {
 /* Sidebar nasconde scrollbar mantenendo lo scroll */
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Barra di caricamento */
+@keyframes slide {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(150%); }
+  100% { transform: translateX(400%); }
+}

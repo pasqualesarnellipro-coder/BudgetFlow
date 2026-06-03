@@ -172,15 +172,28 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
       // Auto-categorizza con matching intelligente
       const auto: Record<number, string> = {}
       parsed.forEach((row, i) => {
+        // ── Priorità 1: match diretto dalla colonna categoria del file ────────
+        if (row.rawCategory) {
+          const rawCatNorm = row.rawCategory.toLowerCase().trim()
+          const directMatch = localCats.find(
+            (c) => c.active && c.name.toLowerCase() === rawCatNorm
+          ) ?? localCats.find(
+            (c) => c.active && (
+              rawCatNorm.includes(c.name.toLowerCase()) ||
+              c.name.toLowerCase().includes(rawCatNorm)
+            )
+          )
+          if (directMatch) { auto[i] = directMatch.id; return }
+        }
+
+        // ── Priorità 2: suggerimento dalla descrizione ────────────────────────
         const hint = suggestCategory(row.description)
         if (!hint) return
 
-        // 1. Match esatto sul nome categoria
         let cat = localCats.find(
           (c) => c.type === hint.type && c.active &&
           c.name.toLowerCase() === hint.hint.toLowerCase()
         )
-        // 2. Match parziale — ogni parola del hint nel nome categoria
         if (!cat) {
           const words = hint.hint.toLowerCase().split(/\s+/)
           cat = localCats.find(
@@ -188,7 +201,6 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
             words.every((w) => c.name.toLowerCase().includes(w))
           )
         }
-        // 3. Match parziale — almeno una parola
         if (!cat) {
           const words = hint.hint.toLowerCase().split(/\s+/)
           cat = localCats.find(
@@ -196,11 +208,9 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
             words.some((w) => w.length > 3 && c.name.toLowerCase().includes(w))
           )
         }
-        // 4. Fallback: prima categoria attiva del tipo corretto
         if (!cat) {
           cat = localCats.find((c) => c.type === hint.type && c.active)
         }
-
         if (cat) auto[i] = cat.id
       })
       setCatMap(auto)
@@ -655,6 +665,27 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
                         </select>
                       </div>
                     </div>
+                  )}
+                </div>
+
+                {/* Colonna Categoria (opzionale) */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 uppercase tracking-wide mb-1.5">
+                    Colonna Categoria <span className="font-normal text-gray-400 normal-case">(opzionale)</span>
+                  </label>
+                  <select
+                    value={colMap.category ?? ''}
+                    onChange={(e) => setColMap({ ...colMap, category: e.target.value || undefined })}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  >
+                    <option value="">— Non presente —</option>
+                    {result.headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  {colMap.category && (
+                    <p className="text-xs text-indigo-600 mt-1 font-mono">
+                      Raw: <span className="text-gray-600">{result.rows[0]?.[colMap.category] ?? '—'}</span>
+                      <span className="ml-2 text-indigo-400">→ usato per auto-assegnare la categoria</span>
+                    </p>
                   )}
                 </div>
 

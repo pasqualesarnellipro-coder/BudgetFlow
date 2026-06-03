@@ -13,12 +13,15 @@ export interface ParsedRow {
   rawDate: string
   rawAmount: string
   rowIndex: number
+  rawCategory?: string  // valore grezzo dalla colonna categoria (se presente)
 }
 
 export interface ColumnMap {
   date: string
   description: string
   amount: string
+  /** Colonna categoria opzionale — usata per auto-assegnazione */
+  category?: string
   /** Se la banca usa colonne separate per DARE/AVERE */
   amountIn?: string
   amountOut?: string
@@ -155,6 +158,10 @@ const AMOUNT_KEYWORDS = [
   'importo eur', 'importo', 'ammontare', 'amount (eur)', 'amount',
   'valore', 'saldo movim', 'totale',
 ]
+const CATEGORY_KEYWORDS = [
+  'categoria', 'category', 'tipo spesa', 'tipo movimento', 'tipologia',
+  'sottocategoria', 'voce', 'tag',
+]
 // Colonne "Avere" / Entrate (positivo)
 const IN_KEYWORDS = [
   'entrate', 'entrata', 'avere', 'accredito', 'credito',
@@ -193,9 +200,13 @@ export function suggestColumns(headers: string[], rows: Record<string, string>[]
   const byAmount  = [...scored].sort((a, b) => b.amountScore - a.amountScore)
   const byIn      = [...scored].sort((a, b) => b.inScore     - a.inScore)
   const byOut     = [...scored].sort((a, b) => b.outScore    - a.outScore)
+  const byCat     = [...scored].sort((a, b) =>
+    scoreHeader(b.h, CATEGORY_KEYWORDS) - scoreHeader(a.h, CATEGORY_KEYWORDS)
+  )
 
   const dateCol     = byDate[0]?.h   ?? headers[0] ?? ''
   const descCol     = byDesc[0]?.h   ?? headers[1] ?? ''
+  const categoryCol = scoreHeader(byCat[0]?.h ?? '', CATEGORY_KEYWORDS) > 0 ? byCat[0].h : ''
   const amountInCol = byIn[0]?.inScore  > 0 ? byIn[0].h  : ''
   const amountOutCol= byOut[0]?.outScore > 0 ? byOut[0].h : ''
   const amountCol   = byAmount[0]?.amountScore > 0 ? byAmount[0].h : ''
@@ -224,6 +235,7 @@ export function suggestColumns(headers: string[], rows: Record<string, string>[]
     date:        dateCol,
     description: descCol,
     amount:      useSplit ? amountCol : (amountCol || amountInCol || (headers[2] ?? '')),
+    category:    categoryCol || undefined,
     amountIn:    useSplit ? amountInCol  : undefined,
     amountOut:   useSplit ? amountOutCol : undefined,
     decimalSep,
@@ -274,6 +286,7 @@ export function applyColumnMap(rows: Record<string, string>[], map: ColumnMap): 
       rawDate,
       rawAmount,
       rowIndex: i,
+      rawCategory: map.category ? (row[map.category] ?? '').trim() : undefined,
     })
   })
 
