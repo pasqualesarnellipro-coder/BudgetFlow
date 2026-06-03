@@ -209,74 +209,7 @@ export function AnnualBudgetPage() {
         </div>
       )}
 
-      {/* Pannello fill inline ─────────────────────────────────────────────── */}
-      {fillPanel && (
-        <div className="bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-700 rounded-2xl px-5 py-4 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{fillPanel.icon}</span>
-            <span className="font-semibold text-indigo-900 dark:text-indigo-200 text-sm">{fillPanel.catName}</span>
-          </div>
-
-          {/* Importo */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-indigo-700 dark:text-indigo-400 font-medium">Importo</label>
-            <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-indigo-400 text-xs">€</span>
-              <input
-                type="number"
-                autoFocus
-                value={fillPanel.amount}
-                onChange={(e) => setFillPanel({ ...fillPanel, amount: e.target.value })}
-                onKeyDown={(e) => e.key === 'Enter' && handleFill()}
-                placeholder="0"
-                className="pl-6 pr-2 py-1.5 w-28 text-right text-sm border border-indigo-300 dark:border-indigo-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
-              />
-            </div>
-          </div>
-
-          {/* Da quale mese */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-indigo-700 dark:text-indigo-400 font-medium">Da</label>
-            <select
-              value={fillPanel.fromMonth}
-              onChange={(e) => setFillPanel({ ...fillPanel, fromMonth: +e.target.value })}
-              className="border border-indigo-300 dark:border-indigo-600 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
-            >
-              {MONTH_NAMES.map((m, i) => (
-                <option key={i} value={i + 1}>{m}</option>
-              ))}
-            </select>
-            <span className="text-xs text-indigo-600 dark:text-indigo-400">a Dicembre</span>
-          </div>
-
-          {/* Azioni */}
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => setFillPanel({ ...fillPanel, fromMonth: 1 })}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                fillPanel.fromMonth === 1
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
-              }`}
-            >
-              = Tutti i mesi
-            </button>
-            <button
-              onClick={handleFill}
-              disabled={saving || !fillPanel.amount}
-              className="text-xs px-4 py-1.5 rounded-lg font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
-              {saving ? 'Salvataggio...' : `Applica ${fillPanel.fromMonth === 1 ? '(12 mesi)' : `(${13 - fillPanel.fromMonth} mesi)`}`}
-            </button>
-            <button
-              onClick={() => setFillPanel(null)}
-              className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 p-1"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Il pannello fill è ora inline sotto ogni riga — rimosso da qui */}
 
       {/* Grand total annuo per tipo ─────────────────────────────────────── */}
       {(budgetPlans as BudgetPlan[]).length > 0 && (
@@ -507,7 +440,7 @@ export function AnnualBudgetPage() {
                         <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                           {formatCurrency(total, currency)}
                         </td>
-                        {/* Pulsante "Riempi tutti" — sempre visibile, non più nascosto */}
+                        {/* Pulsante "Riempi tutti" */}
                         <td className="px-3 py-1 text-right">
                           <button
                             onClick={() => isActiveFill ? setFillPanel(null) : openFill(cat)}
@@ -522,6 +455,71 @@ export function AnnualBudgetPage() {
                           </button>
                         </td>
                       </tr>
+
+                      {/* ── Pannello fill INLINE — appare subito sotto la riga attiva ── */}
+                      {isActiveFill && fillPanel && (
+                        <tr className="bg-indigo-50/80 dark:bg-indigo-950/30 border-t border-indigo-100 dark:border-indigo-800">
+                          <td colSpan={16} className="px-4 py-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                              {/* Importo */}
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs text-indigo-700 dark:text-indigo-400 font-medium whitespace-nowrap">Importo €</label>
+                                <input
+                                  type="number"
+                                  autoFocus
+                                  value={fillPanel.amount}
+                                  onChange={(e) => setFillPanel({ ...fillPanel, amount: e.target.value })}
+                                  onKeyDown={(e) => e.key === 'Enter' && handleFill()}
+                                  placeholder="0"
+                                  className="w-28 text-right text-sm border border-indigo-300 dark:border-indigo-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
+                                />
+                              </div>
+
+                              {/* Da quale mese */}
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs text-indigo-700 dark:text-indigo-400 font-medium whitespace-nowrap">Da</label>
+                                <select
+                                  value={fillPanel.fromMonth}
+                                  onChange={(e) => setFillPanel({ ...fillPanel, fromMonth: +e.target.value })}
+                                  className="border border-indigo-300 dark:border-indigo-600 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white dark:bg-gray-700 dark:text-gray-100"
+                                >
+                                  {MONTH_NAMES.map((m, i) => (
+                                    <option key={i} value={i + 1}>{m}</option>
+                                  ))}
+                                </select>
+                                <span className="text-xs text-indigo-500 dark:text-indigo-400 whitespace-nowrap">a Dicembre</span>
+                              </div>
+
+                              {/* Azioni */}
+                              <div className="flex items-center gap-2 ml-auto">
+                                <button
+                                  onClick={() => setFillPanel({ ...fillPanel, fromMonth: 1 })}
+                                  className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                                    fillPanel.fromMonth === 1
+                                      ? 'bg-indigo-600 text-white'
+                                      : 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                                  }`}
+                                >
+                                  = Tutti i mesi
+                                </button>
+                                <button
+                                  onClick={handleFill}
+                                  disabled={saving || !fillPanel.amount}
+                                  className="text-xs px-4 py-1.5 rounded-lg font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors whitespace-nowrap"
+                                >
+                                  {saving ? 'Salvataggio…' : `Applica ${fillPanel.fromMonth === 1 ? '(12 mesi)' : `(${13 - fillPanel.fromMonth} mesi)`}`}
+                                </button>
+                                <button
+                                  onClick={() => setFillPanel(null)}
+                                  className="p-1.5 text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     )
                   })}
                   {/* Riga totale sezione */}
