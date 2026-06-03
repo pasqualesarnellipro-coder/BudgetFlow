@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { formatCurrency } from '@/lib/formatters'
 import {
   Plus, Pencil, Trash2, CreditCard, Banknote, PiggyBank,
   TrendingUp, Wallet, Bitcoin, HelpCircle, Star, ArrowLeftRight,
-  CheckCircle2,
+  CheckCircle2, RefreshCw,
 } from 'lucide-react'
 import type { BankAccount, AccountType, Transaction } from '@/lib/database.types'
 
@@ -52,9 +53,13 @@ const emptyForm = (): Partial<BankAccount> => ({
 export function AccountsPage() {
   const { profile } = useAppStore()
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<Partial<BankAccount>>(emptyForm())
+  // Stato per modifica saldo inline sulla card
+  const [editingBalanceId, setEditingBalanceId] = useState<string | null>(null)
+  const [balanceInput, setBalanceInput] = useState('')
 
   const currency = profile?.currency ?? 'EUR'
 
@@ -91,6 +96,26 @@ export function AccountsPage() {
         map[key].count++
         if (t.type === 'INCOME') map[key].in += t.amount
         else map[key].out += t.amount
+      })
+      return map
+    },
+    enabled: !!profile,
+  })
+
+  // ─── Saldo calcolato da TUTTE le transazioni del conto (storico completo) ─
+  const { data: calcBalances = {} } = useQuery({
+    queryKey: ['calc_balances', profile?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('transactions')
+        .select('account_id, type, amount')
+        .eq('user_id', profile!.id)
+      const map: Record<string, number> = {}
+      ;(data ?? []).forEach((t: Pick<Transaction, 'account_id' | 'type' | 'amount'>) => {
+        if (!t.account_id) return
+        if (!map[t.account_id]) map[t.account_id] = 0
+        if (t.type === 'INCOME') map[t.account_id] += t.amount
+        else map[t.account_id] -= t.amount
       })
       return map
     },
@@ -138,6 +163,15 @@ export function AccountsPage() {
 
     qc.invalidateQueries({ queryKey: ['bank_accounts'] })
     setShowModal(false)
+  }
+
+  const handleUpdateBalance = async (id: string) => {
+    const val = parseFloat(balanceInput)
+    if (isNaN(val)) return
+    await supabase.from('bank_accounts').update({ balance: val }).eq('id', id)
+    qc.invalidateQueries({ queryKey: ['bank_accounts'] })
+    setEditingBalanceId(null)
+    setBalanceInput('')
   }
 
   const handleDelete = async (id: string) => {
@@ -245,10 +279,66 @@ export function AccountsPage() {
                     </div>
                   </div>
 
-                  <p className="text-3xl font-bold" style={{ color: acc.color }}>
-                    {formatCurrency(acc.balance, acc.currency)}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">Saldo attuale</p>
+                  {/* Saldo — click per modifica inline */}
+                  {editingBalanceId === acc.id ? (
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">€</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          autoFocus
+                          value={balanceInput}
+                          onChange={(e) => setBalanceInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleUpdateBalance(acc.id)
+                            if (e.key === 'Escape') { setEditingBalanceId(null); setBalanceInput('') }
+                          }}
+                          className="w-full border-2 rounded-xl pl-7 pr-3 py-2 text-lg font-bold focus:outline-none focus:ring-2"
+                          style={{ borderColor: acc.color, color: acc.color }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleUpdateBalance(acc.id)}
+                        className="p-2 rounded-xl text-white text-xs font-bold"
+                        style={{ backgroundColor: acc.color }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => { setEditingBalanceId(null); setBalanceInput('') }}
+                        className="p-2 rounded-xl bg-gray-100 text-gray-400 text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setEditingBalanceId(acc.id); setBalanceInput(String(acc.balance)) }}
+                      className="text-left group w-full"
+                      title="Clicca per aggiornare il saldo"
+                    >
+                      <p className="text-3xl font-bold group-hover:opacity-80 transition-opacity flex items-center gap-2" style={{ color: acc.color }}>
+                        {formatCurrency(acc.balance, acc.currency)}
+                        <RefreshCw size={14} className="opacity-0 group-hover:opacity-50 transition-opacity" />
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Saldo dichiarato — clicca per aggiornare
+                      </p>
+                    </button>
+                  )}
+
+                  {/* Saldo calcolato dalle transazioni */}
+                  {calcBalances[acc.id] !== undefined && (
+                    <div className="mt-2 pt-2 border-t border-black/5">
+                      <p className="text-xs text-gray-400 flex items-center justify-between">
+                        <span>Saldo calcolato da transazioni</span>
+                        <span className={`font-semibold ${calcBalances[acc.id] >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          {calcBalances[acc.id] >= 0 ? '+' : ''}{formatCurrency(calcBalances[acc.id], acc.currency)}
+                        </span>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Stats movimenti */}
@@ -281,7 +371,7 @@ export function AccountsPage() {
                   )}
                   <div className="ml-auto flex items-center gap-1">
                     <button
-                      onClick={() => window.location.href = `/transactions?account=${acc.id}`}
+                      onClick={() => navigate(`/transactions?account=${acc.id}`)}
                       className="p-1.5 text-gray-300 hover:text-indigo-500 rounded-lg hover:bg-indigo-50"
                       title="Vedi transazioni"
                     >
