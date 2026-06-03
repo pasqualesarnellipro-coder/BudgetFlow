@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppStore } from '@/store/useAppStore'
 import { TypeBadge } from '@/components/ui/TypeBadge'
 import { formatCurrency } from '@/lib/formatters'
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, PiggyBank, CreditCard, Upload, Download, SlidersHorizontal, ChevronUp, ChevronDown, X, Wallet } from 'lucide-react'
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, PiggyBank, CreditCard, Upload, Download, SlidersHorizontal, ChevronUp, ChevronDown, X, Wallet, Check } from 'lucide-react'
 import { CategoryIcon } from '@/lib/categoryIcons'
 import { ImportModal } from '@/components/import/ImportModal'
 import { HelpTooltip } from '@/components/ui/HelpTooltip'
@@ -181,6 +181,12 @@ export function TransactionsPage() {
   const [bulkCatId, setBulkCatId] = useState('')
   const [bulkAccountId, setBulkAccountId] = useState('')
   const [allFilteredSelected, setAllFilteredSelected] = useState(false)
+  // Mini-form nuova categoria nella barra bulk
+  const [showNewCat, setShowNewCat] = useState(false)
+  const [newCatName, setNewCatName] = useState('')
+  const [newCatType, setNewCatType] = useState<TransactionType>('EXPENSES')
+  const [newCatIcon, setNewCatIcon] = useState('🏷️')
+  const NEW_CAT_ICONS = ['🏷️','🛒','🍕','🚗','💊','🏠','✈️','💻','🎮','👗','💰','📦','🎁','⚡','📱','🏋️','🎓','🐾','💼','🔧']
 
   const toggleSelect = (id: string) => {
     setAllFilteredSelected(false)
@@ -213,6 +219,22 @@ export function TransactionsPage() {
     qc.invalidateQueries({ queryKey: ['transactions'] })
     setSelectedIds(new Set())
     setAllFilteredSelected(false)
+  }
+
+  const handleCreateAndApplyCat = async () => {
+    if (!profile || !newCatName.trim()) return
+    const { data: newCat } = await supabase
+      .from('categories')
+      .insert({ user_id: profile.id, name: newCatName.trim(), icon: newCatIcon, type: newCatType, active: true })
+      .select()
+      .single()
+    if (!newCat) return
+    qc.invalidateQueries({ queryKey: ['categories'] })
+    // Applica subito la nuova categoria alle transazioni selezionate
+    await handleBulkCategorize(newCat.id)
+    setShowNewCat(false)
+    setNewCatName('')
+    setNewCatIcon('🏷️')
   }
 
   const handleBulkCategorize = async (catId: string) => {
@@ -426,13 +448,18 @@ export function TransactionsPage() {
             {/* Ricategorizza */}
             <select
               value={bulkCatId}
-              onChange={(e) => handleBulkCategorize(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value === '__new__') { setShowNewCat(true); setBulkCatId('') }
+                else handleBulkCategorize(e.target.value)
+              }}
               className="text-xs bg-white/15 border border-white/30 text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-36"
             >
               <option value="">Cambia categoria…</option>
               {categories.map((c: Category) => (
                 <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
               ))}
+              <option disabled>──────────</option>
+              <option value="__new__">+ Nuova categoria…</option>
             </select>
             {/* Cambia conto */}
             {accounts.length > 0 && (
@@ -463,6 +490,62 @@ export function TransactionsPage() {
             </button>
           </div>
           </div>{/* fine flex items-center gap-3 */}
+
+          {/* Mini-form nuova categoria */}
+          {showNewCat && (
+            <div className="bg-white rounded-xl p-3 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-gray-700">Nuova categoria</p>
+                <button onClick={() => setShowNewCat(false)} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+              </div>
+              {/* Emoji picker */}
+              <div className="flex flex-wrap gap-1">
+                {NEW_CAT_ICONS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => setNewCatIcon(e)}
+                    className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center border-2 transition-all ${
+                      newCatIcon === e ? 'border-indigo-500 bg-indigo-50 scale-110' : 'border-transparent hover:bg-gray-100'
+                    }`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                {/* Nome */}
+                <input
+                  type="text"
+                  autoFocus
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreateAndApplyCat()}
+                  placeholder="Nome categoria…"
+                  className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+                {/* Tipo */}
+                <select
+                  value={newCatType}
+                  onChange={(e) => setNewCatType(e.target.value as TransactionType)}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                >
+                  <option value="EXPENSES">Spesa</option>
+                  <option value="INCOME">Entrata</option>
+                  <option value="SAVINGS">Risparmio</option>
+                  <option value="DEBTS">Debito</option>
+                </select>
+                {/* Crea + applica */}
+                <button
+                  onClick={handleCreateAndApplyCat}
+                  disabled={!newCatName.trim()}
+                  className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
+                  <Check size={12} /> Crea e applica
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Banner "seleziona tutti i risultati filtrati" */}
           {!allFilteredSelected && selectedIds.size === paginated.length && filtered.length > PAGE_SIZE && (
