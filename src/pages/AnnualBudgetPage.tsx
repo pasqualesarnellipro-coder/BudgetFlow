@@ -278,42 +278,101 @@ export function AnnualBudgetPage() {
       )}
 
       {/* Ancora da allocare per mese — prominente */}
-      <div className="bg-sidebar rounded-2xl shadow-sm p-5 overflow-x-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-white font-bold text-sm">Ancora da allocare</p>
-            <p className="text-white/50 text-xs">Reddito pianificato − spese − risparmi − debiti</p>
-          </div>
-        </div>
-        <div className="flex gap-3 min-w-max">
-          {MONTH_NAMES.map((m, i) => {
-            const month = i + 1
-            const income = getMonthBudgetByType('INCOME', month)
-            const out = ['EXPENSES', 'SAVINGS', 'DEBTS'].reduce((s, t) => s + getMonthBudgetByType(t, month), 0)
-            const residual = income - out
-            const isCurrentMonth = month === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
-            return (
-              <div
-                key={m}
-                className={`text-center min-w-20 rounded-xl px-3 py-2.5 ${
-                  isCurrentMonth ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'
-                }`}
-              >
-                <p className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${
-                  isCurrentMonth ? 'text-white' : 'text-white/40'
-                }`}>{m}</p>
-                <p className={`text-sm font-bold ${
-                  residual > 0 ? 'text-emerald-400' :
-                  residual < 0 ? 'text-rose-400' :
-                  'text-white/30'
-                }`}>
-                  {income === 0 && out === 0 ? '—' : (residual >= 0 ? '+' : '') + formatCurrency(residual, currency)}
+      {(() => {
+        const monthData = MONTH_NAMES.map((m, i) => {
+          const month = i + 1
+          const income = getMonthBudgetByType('INCOME', month)
+          const out = ['EXPENSES', 'SAVINGS', 'DEBTS'].reduce((s, t) => s + getMonthBudgetByType(t, month), 0)
+          return { m, month, income, out, residual: income - out }
+        })
+        const annualResidual = monthData.reduce((s, d) => s + d.residual, 0)
+        const hasAnyData = monthData.some((d) => d.income > 0 || d.out > 0)
+        const overBudgetCount = monthData.filter((d) => d.income > 0 && d.residual < 0).length
+
+        return (
+          <div className="bg-sidebar rounded-2xl shadow-sm p-5 overflow-x-auto">
+            {/* Header con spiegazione */}
+            <div className="flex items-start justify-between mb-1 gap-4">
+              <div>
+                <p className="text-white font-bold text-sm">Margine mensile disponibile</p>
+                <p className="text-white/50 text-xs mt-0.5">
+                  Reddito pianificato <span className="text-white/30">−</span> spese <span className="text-white/30">−</span> risparmi <span className="text-white/30">−</span> debiti
                 </p>
               </div>
-            )
-          })}
-        </div>
-      </div>
+              {/* Totale annuo residuo */}
+              {hasAnyData && (
+                <div className="text-right shrink-0">
+                  <p className="text-white/40 text-[10px] uppercase tracking-wide">Residuo annuale</p>
+                  <p className={`text-base font-bold ${annualResidual > 0 ? 'text-emerald-400' : annualResidual < 0 ? 'text-rose-400' : 'text-white/30'}`}>
+                    {annualResidual >= 0 ? '+' : ''}{formatCurrency(annualResidual, currency)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Legenda colori */}
+            <div className="flex items-center gap-4 mb-4 mt-2">
+              <span className="flex items-center gap-1.5 text-[10px] text-white/40">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                Avanzo — puoi allocare altro o risparmiare
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px] text-white/40">
+                <span className="w-2 h-2 rounded-full bg-rose-400 inline-block" />
+                Sforamento — spese pianificate superiori al reddito
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px] text-white/40">
+                <span className="w-2 h-2 rounded-full bg-white/20 inline-block" />
+                Nessun dato inserito
+              </span>
+            </div>
+
+            {/* Avviso sforamento */}
+            {overBudgetCount > 0 && (
+              <div className="mb-4 flex items-center gap-2 bg-rose-500/20 border border-rose-400/30 rounded-xl px-3 py-2">
+                <span className="text-rose-300 text-sm">⚠️</span>
+                <p className="text-rose-200 text-xs">
+                  <strong>{overBudgetCount} {overBudgetCount === 1 ? 'mese' : 'mesi'}</strong> in sforamento — le uscite pianificate superano il reddito. Riduci le spese o aumenta il reddito pianificato.
+                </p>
+              </div>
+            )}
+
+            {/* Griglia mesi */}
+            <div className="flex gap-3 min-w-max">
+              {monthData.map(({ m, month, income, out, residual }) => {
+                const isCurrentMonth = month === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
+                return (
+                  <div
+                    key={m}
+                    className={`text-center min-w-20 rounded-xl px-3 py-2.5 ${
+                      isCurrentMonth ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5'
+                    }`}
+                  >
+                    <p className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${
+                      isCurrentMonth ? 'text-white' : 'text-white/40'
+                    }`}>{m}</p>
+                    <p className={`text-sm font-bold ${
+                      residual > 0 ? 'text-emerald-400' :
+                      residual < 0 ? 'text-rose-400' :
+                      'text-white/30'
+                    }`}>
+                      {income === 0 && out === 0 ? '—' : (residual >= 0 ? '+' : '') + formatCurrency(residual, currency)}
+                    </p>
+                    {/* Mini barra sotto */}
+                    {(income > 0 || out > 0) && (
+                      <div className="mt-1.5 h-0.5 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${residual >= 0 ? 'bg-emerald-400/60' : 'bg-rose-400/60'}`}
+                          style={{ width: income > 0 ? `${Math.min(100, (out / income) * 100)}%` : '100%' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Tabelle per tipo ────────────────────────────────────────────────── */}
       {(Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
