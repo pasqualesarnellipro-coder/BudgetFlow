@@ -525,7 +525,23 @@ export function TransactionsPage() {
                       className="accent-indigo-600 w-4 h-4 cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-nowrap">{t.date}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-gray-500 dark:text-gray-400">{t.date}</span>
+                      {(() => {
+                        const acc = accounts.find((a) => a.id === t.account_id)
+                        return acc ? (
+                          <span className="flex items-center gap-1">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: acc.color }}
+                            />
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[90px]">{acc.name}</span>
+                          </span>
+                        ) : null
+                      })()}
+                    </div>
+                  </td>
                   <td className="px-4 py-3"><TypeBadge type={t.type} /></td>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-1.5">
