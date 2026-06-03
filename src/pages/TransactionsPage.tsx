@@ -178,6 +178,7 @@ export function TransactionsPage() {
   // ─── Selezione multipla ──────────────────────────────────────────────────────
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [bulkCatId, setBulkCatId] = useState('')
+  const [bulkAccountId, setBulkAccountId] = useState('')
   const [allFilteredSelected, setAllFilteredSelected] = useState(false)
 
   const toggleSelect = (id: string) => {
@@ -223,6 +224,25 @@ export function TransactionsPage() {
     setSelectedIds(new Set())
     setAllFilteredSelected(false)
     setBulkCatId('')
+  }
+
+  const handleBulkAccount = async (accountId: string) => {
+    if (!accountId) return
+    const ids = [...selectedIds]
+    // Aggiorna a chunk per velocità
+    const CHUNK = 20
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      await supabase
+        .from('transactions')
+        .update({ account_id: accountId || null })
+        .in('id', ids.slice(i, i + CHUNK))
+    }
+    qc.invalidateQueries({ queryKey: ['transactions'] })
+    qc.invalidateQueries({ queryKey: ['tx_by_account'] })
+    qc.invalidateQueries({ queryKey: ['calc_balances'] })
+    setSelectedIds(new Set())
+    setAllFilteredSelected(false)
+    setBulkAccountId('')
   }
 
   const clearSelection = () => { setSelectedIds(new Set()); setAllFilteredSelected(false) }
@@ -398,6 +418,19 @@ export function TransactionsPage() {
                 <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
               ))}
             </select>
+            {/* Cambia conto */}
+            {accounts.length > 0 && (
+              <select
+                value={bulkAccountId}
+                onChange={(e) => handleBulkAccount(e.target.value)}
+                className="text-xs bg-white/15 border border-white/30 text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-white/50 min-w-36"
+              >
+                <option value="">Sposta su conto…</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.icon} {a.name}</option>
+                ))}
+              </select>
+            )}
             {/* Elimina */}
             <button
               onClick={handleBulkDelete}
