@@ -288,7 +288,7 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
     }
 
     // ── Deduplicazione: confronta con transazioni già esistenti ──────────────
-    setLoadingMsg('Controllo duplicati...')
+    // controllo duplicati
     const dateMin = toInsert.reduce((m, r) => r.date < m ? r.date : m, toInsert[0].date)
     const dateMax = toInsert.reduce((m, r) => r.date > m ? r.date : m, toInsert[0].date)
     const { data: existing } = await supabase
@@ -313,8 +313,6 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
       setStep('done')
       return
     }
-
-    setLoadingMsg('Salvataggio...')
 
     // Insert a chunk con gestione errori esplicita
     const CHUNK = 25
@@ -341,7 +339,6 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
 
     await qc.invalidateQueries({ queryKey: ['transactions'] })
     setImportedCount(saved)
-    setLoadingMsg('')
     setLoading(false)
 
     if (insertErrors.length > 0 && saved === 0) {
