@@ -309,7 +309,6 @@ export function ImportModal({ onClose, categories: initialCategories }: Props) {
     if (newOnly.length === 0) {
       setImportedCount(0)
       setLoading(false)
-      setLoadingMsg('')
       setStep('done')
       return
     }
