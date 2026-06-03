@@ -211,7 +211,10 @@ export function AnnualBudgetPage() {
 
       {/* Il pannello fill è ora inline sotto ogni riga — rimosso da qui */}
 
-      {/* Grand total annuo per tipo ─────────────────────────────────────── */}
+      {/* ── SEZIONE STICKY: KPI cards + Margine mensile ─────────────────── */}
+      <div className="sticky top-0 z-20 space-y-3 -mx-6 px-6 pt-2 pb-3 bg-gray-50 dark:bg-gray-900 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.08)]">
+
+      {/* Grand total annuo per tipo */}
       {(budgetPlans as BudgetPlan[]).length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
@@ -335,6 +338,8 @@ export function AnnualBudgetPage() {
           </div>
         )
       })()}
+
+      </div>{/* fine sticky */}
 
       {/* Tabelle per tipo ────────────────────────────────────────────────── */}
       {(Object.keys(TYPE_CONFIG) as (keyof typeof TYPE_CONFIG)[]).map((type) => {
