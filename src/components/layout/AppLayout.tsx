@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useIsFetching } from '@tanstack/react-query'
 import { Menu, TrendingUp } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { useAppStore } from '@/store/useAppStore'
@@ -32,8 +33,7 @@ export function AppLayout() {
     return !v
   })
   const { pathname } = useLocation()
-  const navigation = useNavigation()
-  const isNavigating = navigation.state === 'loading'
+  const isFetching = useIsFetching() > 0
 
   // ── Titolo tab dinamico ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -64,8 +64,8 @@ export function AppLayout() {
       />
 
       <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 flex flex-col min-w-0 relative">
-        {/* Barra di caricamento in cima durante navigazione/refresh */}
-        {isNavigating && (
+        {/* Barra di caricamento in cima durante fetch dati */}
+        {isFetching && (
           <div className="absolute top-0 left-0 right-0 z-50 h-0.5 bg-indigo-100 overflow-hidden">
             <div className="h-full bg-indigo-500 animate-[loading_1s_ease-in-out_infinite]" style={{ width: '40%', animation: 'slide 1s ease-in-out infinite' }} />
           </div>
